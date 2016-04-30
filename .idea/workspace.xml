@@ -22,31 +22,11 @@
   </component>
   <component name="FileEditorManager">
     <leaf>
-      <file leaf-file-name="package.scala" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/re/toph/hybrid_db/accumulator/package.scala">
+      <file leaf-file-name="NullPrefetcher.scala" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/re/toph/hybrid_db/NullPrefetcher.scala">
           <provider selected="true" editor-type-id="text-editor">
             <state vertical-scroll-proportion="0.0">
-              <caret line="15" column="88" selection-start-line="15" selection-start-column="88" selection-end-line="15" selection-end-column="88" />
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="package.scala" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/re/toph/hybrid_db/accumulator/sum/package.scala">
-          <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.0">
-              <caret line="0" column="36" selection-start-line="0" selection-start-column="36" selection-end-line="0" selection-end-column="36" />
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="ReallyNullPrefetcher.scala" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/re/toph/hybrid_db/ReallyNullPrefetcher.scala">
-          <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.0">
-              <caret line="19" column="38" selection-start-line="19" selection-start-column="38" selection-end-line="19" selection-end-column="38" />
+              <caret line="22" column="62" selection-start-line="22" selection-start-column="62" selection-end-line="22" selection-end-column="62" />
               <folding>
                 <element signature="e#27#43#0" expanded="true" />
               </folding>
@@ -54,49 +34,13 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="HelloWorld.scala" pinned="false" current-in-tab="true">
-        <entry file="file://$PROJECT_DIR$/src/re/toph/hybrid_db/HelloWorld.scala">
-          <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.64094955">
-              <caret line="128" column="75" selection-start-line="128" selection-start-column="75" selection-end-line="128" selection-end-column="75" />
-              <folding>
-                <element signature="e#27#54#0" expanded="true" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="NullPrefetcher.scala" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/re/toph/hybrid_db/NullPrefetcher.scala">
-          <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.0">
-              <caret line="20" column="74" selection-start-line="20" selection-start-column="74" selection-end-line="20" selection-end-column="74" />
-              <folding>
-                <marker date="1461925863436" expanded="true" signature="34:69" placeholder="..." />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="Prefetcher.scala" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/re/toph/hybrid_db/Prefetcher.scala">
-          <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.0">
-              <caret line="19" column="0" selection-start-line="19" selection-start-column="0" selection-end-line="19" selection-end-column="0" />
-              <folding>
-                <element signature="e#27#81#0" expanded="true" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="LookaheadMultiPrefetcher.scala" pinned="false" current-in-tab="false">
+      <file leaf-file-name="LookaheadMultiPrefetcher.scala" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/re/toph/hybrid_db/LookaheadMultiPrefetcher.scala">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.0">
-              <caret line="49" column="70" selection-start-line="49" selection-start-column="70" selection-end-line="49" selection-end-column="70" />
+            <state vertical-scroll-proportion="0.6142433">
+              <caret line="23" column="9" selection-start-line="23" selection-start-column="9" selection-end-line="23" selection-end-column="9" />
               <folding>
-                <element signature="e#27#52#0" expanded="true" />
+                <element signature="e#27#60#0" expanded="true" />
               </folding>
             </state>
           </provider>
@@ -106,10 +50,42 @@
         <entry file="file://$PROJECT_DIR$/src/re/toph/hybrid_db/LookaheadJoinPrefetcher.scala">
           <provider selected="true" editor-type-id="text-editor">
             <state vertical-scroll-proportion="0.0">
-              <caret line="11" column="0" selection-start-line="11" selection-start-column="0" selection-end-line="11" selection-end-column="0" />
+              <caret line="41" column="24" selection-start-line="41" selection-start-column="24" selection-end-line="41" selection-end-column="24" />
               <folding>
                 <element signature="e#27#52#0" expanded="true" />
               </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="HelloWorld.scala" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/re/toph/hybrid_db/HelloWorld.scala">
+          <provider selected="true" editor-type-id="text-editor">
+            <state vertical-scroll-proportion="0.0">
+              <caret line="18" column="5" selection-start-line="18" selection-start-column="5" selection-end-line="18" selection-end-column="5" />
+              <folding>
+                <element signature="e#27#68#0" expanded="true" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="Result.scala" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/re/toph/hybrid_db/Result.scala">
+          <provider selected="true" editor-type-id="text-editor">
+            <state vertical-scroll-proportion="0.0">
+              <caret line="2" column="0" selection-start-line="2" selection-start-column="0" selection-end-line="2" selection-end-column="0" />
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="TAccumulator.scala" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/re/toph/hybrid_db/TAccumulator.scala">
+          <provider selected="true" editor-type-id="text-editor">
+            <state vertical-scroll-proportion="0.0">
+              <caret line="42" column="2" selection-start-line="42" selection-start-column="2" selection-end-line="42" selection-end-column="2" />
+              <folding />
             </state>
           </provider>
         </entry>
@@ -119,10 +95,10 @@
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
       <list>
-        <option value="Scala Class" />
         <option value="Scala Trait" />
-        <option value="Scala Object" />
         <option value="Package Object" />
+        <option value="Scala Class" />
+        <option value="Scala Object" />
       </list>
     </option>
   </component>
@@ -155,16 +131,20 @@
         <option value="$PROJECT_DIR$/src/re/toph/hybrid_db/accumulator/ConcatAccumulator.scala" />
         <option value="$PROJECT_DIR$/src/re/toph/hybrid_db/accumulator/SumAccumulator/package.scala" />
         <option value="$PROJECT_DIR$/src/re/toph/hybrid_db/Accumulator.scala" />
-        <option value="$PROJECT_DIR$/src/re/toph/hybrid_db/NullPrefetcher.scala" />
         <option value="$PROJECT_DIR$/src/re/toph/hybrid_db/accumulator/sum/package.scala" />
-        <option value="$PROJECT_DIR$/src/re/toph/hybrid_db/GraphNode.scala" />
-        <option value="$PROJECT_DIR$/src/re/toph/hybrid_db/LookaheadJoinPrefetcher.scala" />
-        <option value="$PROJECT_DIR$/src/re/toph/hybrid_db/Edge.scala" />
-        <option value="$PROJECT_DIR$/src/re/toph/hybrid_db/Prefetcher.scala" />
-        <option value="$PROJECT_DIR$/src/re/toph/hybrid_db/LookaheadMultiPrefetcher.scala" />
-        <option value="$PROJECT_DIR$/src/re/toph/hybrid_db/ReallyNullPrefetcher.scala" />
-        <option value="$PROJECT_DIR$/src/re/toph/hybrid_db/HelloWorld.scala" />
         <option value="$PROJECT_DIR$/src/re/toph/hybrid_db/accumulator/package.scala" />
+        <option value="$PROJECT_DIR$/src/re/toph/hybrid_db/GraphNode.scala" />
+        <option value="$PROJECT_DIR$/src/re/toph/hybrid_db/Graph.scala" />
+        <option value="$PROJECT_DIR$/src/re/toph/hybrid_db/Prefetcher.scala" />
+        <option value="$PROJECT_DIR$/src/re/toph/hybrid_db/LookaheadJoinPrefetcher.scala" />
+        <option value="$PROJECT_DIR$/src/re/toph/hybrid_db/ReallyNullPrefetcher.scala" />
+        <option value="$PROJECT_DIR$/src/re/toph/hybrid_db/Edge.scala" />
+        <option value="$PROJECT_DIR$/src/re/toph/hybrid_db/CompletionCondition.scala" />
+        <option value="$PROJECT_DIR$/src/re/toph/hybrid_db/NullPrefetcher.scala" />
+        <option value="$PROJECT_DIR$/src/re/toph/hybrid_db/accumulator.scala" />
+        <option value="$PROJECT_DIR$/src/re/toph/hybrid_db/HelloWorld.scala" />
+        <option value="$PROJECT_DIR$/src/re/toph/hybrid_db/Result.scala" />
+        <option value="$PROJECT_DIR$/src/re/toph/hybrid_db/LookaheadMultiPrefetcher.scala" />
       </list>
     </option>
   </component>
@@ -389,62 +369,6 @@
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
             </PATH_ELEMENT>
             <PATH_ELEMENT>
-              <option name="myItemId" value="src" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="hybrid_db" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="accumulator" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="package.scala" />
-              <option name="myItemType" value="org.jetbrains.plugins.scala.components.ScalaDefsProjectViewProvider$ScalaFileTreeNode" />
-            </PATH_ELEMENT>
-          </PATH>
-          <PATH>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="hdb-scala" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="hdb-scala" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="src" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="hybrid_db" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="accumulator" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="sum" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="package.scala" />
-              <option name="myItemType" value="org.jetbrains.plugins.scala.components.ScalaDefsProjectViewProvider$ScalaFileTreeNode" />
-            </PATH_ELEMENT>
-          </PATH>
-          <PATH>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="hdb-scala" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="hdb-scala" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
               <option name="myItemId" value=".idea" />
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
             </PATH_ELEMENT>
@@ -460,7 +384,12 @@
     <property name="project.structure.proportion" value="0.15" />
     <property name="project.structure.side.proportion" value="0.35172415" />
     <property name="last_opened_file_path" value="/usr/share/java/postgresql.jar!/" />
-    <property name="SearchEverywhereHistoryKey" value="Hell&#9;FILE&#9;file:///home/christoph/Documents/dev/hdb-scala/src/re/toph/hybrid_db/HelloWorld.scala&#10;prefe&#9;FILE&#9;file:///home/christoph/Documents/dev/hdb-scala/src/re/toph/hybrid_db/Prefetcher.scala&#10;hello&#9;FILE&#9;file:///home/christoph/Documents/dev/hdb-scala/src/re/toph/hybrid_db/HelloWorld.scala&#10;sum&#9;null&#9;null&#10;pre&#9;FILE&#9;file:///home/christoph/Documents/dev/hdb-scala/src/re/toph/hybrid_db/Prefetcher.scala&#10;Edge&#9;FILE&#9;file:///home/christoph/Documents/dev/hdb-scala/src/re/toph/hybrid_db/Edge.scala&#10;GraphNod&#9;FILE&#9;file:///home/christoph/Documents/dev/hdb-scala/src/GraphNode.scala&#10;Timer&#9;FILE&#9;file:///home/christoph/Documents/dev/hdb-scala/src/Timer.scala&#10;null&#9;FILE&#9;file:///home/christoph/Documents/dev/hdb-scala/src/NullPrefetcher.scala&#10;timer&#9;FILE&#9;file:///home/christoph/Documents/dev/hdb-scala/src/Timer.scala&#10;Node&#9;FILE&#9;file:///home/christoph/Documents/dev/hdb-scala/src/GraphNode.scala" />
+    <property name="SearchEverywhereHistoryKey" value="result&#9;FILE&#9;file:///home/christoph/Documents/dev/hdb-scala/src/re/toph/hybrid_db/Result.scala&#10;really&#9;FILE&#9;file:///home/christoph/Documents/dev/hdb-scala/src/re/toph/hybrid_db/ReallyNullPrefetcher.scala&#10;reall&#9;FILE&#9;file:///home/christoph/Documents/dev/hdb-scala/src/re/toph/hybrid_db/ReallyNullPrefetcher.scala&#10;prefetcher&#9;FILE&#9;file:///home/christoph/Documents/dev/hdb-scala/src/re/toph/hybrid_db/LookaheadMultiPrefetcher.scala&#10;pref&#9;FILE&#9;file:///home/christoph/Documents/dev/hdb-scala/src/re/toph/hybrid_db/ReallyNullPrefetcher.scala&#10;prefet&#9;FILE&#9;file:///home/christoph/Documents/dev/hdb-scala/src/re/toph/hybrid_db/Prefetcher.scala&#10;gra&#9;FILE&#9;file:///home/christoph/Documents/dev/hdb-scala/src/re/toph/hybrid_db/Graph.scala&#10;edge&#9;FILE&#9;file:///home/christoph/Documents/dev/hdb-scala/src/re/toph/hybrid_db/Edge.scala&#10;graphn&#9;FILE&#9;file:///home/christoph/Documents/dev/hdb-scala/src/re/toph/hybrid_db/GraphNode.scala&#10;sum&#9;null&#9;null&#10;Hell&#9;FILE&#9;file:///home/christoph/Documents/dev/hdb-scala/src/re/toph/hybrid_db/HelloWorld.scala&#10;prefe&#9;FILE&#9;file:///home/christoph/Documents/dev/hdb-scala/src/re/toph/hybrid_db/Prefetcher.scala&#10;hello&#9;FILE&#9;file:///home/christoph/Documents/dev/hdb-scala/src/re/toph/hybrid_db/HelloWorld.scala&#10;pre&#9;FILE&#9;file:///home/christoph/Documents/dev/hdb-scala/src/re/toph/hybrid_db/Prefetcher.scala&#10;Edge&#9;FILE&#9;file:///home/christoph/Documents/dev/hdb-scala/src/re/toph/hybrid_db/Edge.scala&#10;GraphNod&#9;FILE&#9;file:///home/christoph/Documents/dev/hdb-scala/src/GraphNode.scala&#10;Timer&#9;FILE&#9;file:///home/christoph/Documents/dev/hdb-scala/src/Timer.scala&#10;null&#9;FILE&#9;file:///home/christoph/Documents/dev/hdb-scala/src/NullPrefetcher.scala&#10;timer&#9;FILE&#9;file:///home/christoph/Documents/dev/hdb-scala/src/Timer.scala&#10;Node&#9;FILE&#9;file:///home/christoph/Documents/dev/hdb-scala/src/GraphNode.scala" />
+  </component>
+  <component name="RecentsManager">
+    <key name="MoveClassesOrPackagesDialog.RECENTS_KEY">
+      <recent name="re.toph.hybrid_db" />
+    </key>
   </component>
   <component name="RunManager" selected="Application.HelloWorld">
     <configuration default="false" name="HelloWorld" type="Application" factoryName="Application" temporary="true">
@@ -839,7 +768,7 @@
       <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
       <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="Maven Projects" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="-1" side_tool="false" content_ui="tabs" />
-      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.23051947" sideWeight="0.5" order="0" side_tool="false" content_ui="combo" />
+      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.23014587" sideWeight="0.5" order="0" side_tool="false" content_ui="combo" />
       <window_info id="REPL" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="-1" side_tool="true" content_ui="tabs" />
       <window_info id="Tail" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="-1" side_tool="false" content_ui="tabs" />
       <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.28309572" sideWeight="0.495671" order="2" side_tool="false" content_ui="tabs" />
@@ -890,31 +819,20 @@
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
-      <option name="time" value="1" />
+      <option name="time" value="12" />
     </breakpoint-manager>
-    <watches-manager />
+    <watches-manager>
+      <configuration name="Application">
+        <watch expression="num.eq(v.asInstanceOf[T], item)" language="Scala" custom="" />
+        <watch expression="num.equiv(v.asInstanceOf[T], item)" language="Scala" custom="" />
+      </configuration>
+    </watches-manager>
   </component>
   <component name="antWorkspaceConfiguration">
     <option name="IS_AUTOSCROLL_TO_SOURCE" value="false" />
     <option name="FILTER_TARGETS" value="false" />
   </component>
   <component name="editorHistoryManager">
-    <entry file="jar:///usr/lib/jvm/java-7-oracle/src.zip!/com/sun/corba/se/impl/orbutil/graph/Graph.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.1773399">
-          <caret line="29" column="17" selection-start-line="29" selection-start-column="17" selection-end-line="29" selection-end-column="17" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/re/toph/hybrid_db/Graph.scala">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.3583461">
-          <caret line="13" column="0" selection-start-line="13" selection-start-column="0" selection-end-line="13" selection-end-column="0" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/re/toph/hybrid_db/Timer.scala">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0">
@@ -931,12 +849,28 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/re/toph/hybrid_db/NullPrefetcher.scala">
+    <entry file="jar:///usr/lib/jvm/java-7-oracle/src.zip!/com/sun/corba/se/impl/orbutil/graph/Graph.java">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0">
-          <caret line="20" column="74" selection-start-line="20" selection-start-column="74" selection-end-line="20" selection-end-column="74" />
+          <caret line="29" column="17" selection-start-line="29" selection-start-column="17" selection-end-line="29" selection-end-column="17" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/re/toph/hybrid_db/Graph.scala">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0">
+          <caret line="18" column="0" selection-start-line="18" selection-start-column="0" selection-end-line="18" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/re/toph/hybrid_db/Prefetcher.scala">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0">
+          <caret line="29" column="16" selection-start-line="29" selection-start-column="16" selection-end-line="29" selection-end-column="16" />
           <folding>
-            <marker date="1461925863436" expanded="true" signature="34:69" placeholder="..." />
+            <element signature="e#27#81#0" expanded="true" />
           </folding>
         </state>
       </provider>
@@ -944,83 +878,81 @@
     <entry file="file://$PROJECT_DIR$/src/re/toph/hybrid_db/GraphNode.scala">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0">
-          <caret line="8" column="86" selection-start-line="8" selection-start-column="86" selection-end-line="8" selection-end-column="86" />
+          <caret line="8" column="28" selection-start-line="8" selection-start-column="28" selection-end-line="8" selection-end-column="28" />
           <folding>
             <element signature="e#27#52#0" expanded="true" />
           </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/re/toph/hybrid_db/Edge.scala">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0">
+          <caret line="7" column="25" selection-start-line="7" selection-start-column="25" selection-end-line="7" selection-end-column="25" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/re/toph/hybrid_db/CompletionCondition.scala">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0">
+          <caret line="100" column="0" selection-start-line="100" selection-start-column="0" selection-end-line="100" selection-end-column="0" />
+          <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/re/toph/hybrid_db/LookaheadJoinPrefetcher.scala">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0">
-          <caret line="11" column="0" selection-start-line="11" selection-start-column="0" selection-end-line="11" selection-end-column="0" />
+          <caret line="41" column="24" selection-start-line="41" selection-start-column="24" selection-end-line="41" selection-end-column="24" />
           <folding>
             <element signature="e#27#52#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/re/toph/hybrid_db/Prefetcher.scala">
+    <entry file="file://$PROJECT_DIR$/src/re/toph/hybrid_db/TAccumulator.scala">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0">
-          <caret line="19" column="0" selection-start-line="19" selection-start-column="0" selection-end-line="19" selection-end-column="0" />
-          <folding>
-            <element signature="e#27#81#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/re/toph/hybrid_db/LookaheadMultiPrefetcher.scala">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0">
-          <caret line="49" column="70" selection-start-line="49" selection-start-column="70" selection-end-line="49" selection-end-column="70" />
-          <folding>
-            <element signature="e#27#52#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/re/toph/hybrid_db/accumulator/sum/package.scala">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0">
-          <caret line="0" column="36" selection-start-line="0" selection-start-column="36" selection-end-line="0" selection-end-column="36" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/re/toph/hybrid_db/Edge.scala">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.18694362">
-          <caret line="7" column="74" selection-start-line="7" selection-start-column="74" selection-end-line="7" selection-end-column="74" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/re/toph/hybrid_db/ReallyNullPrefetcher.scala">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0">
-          <caret line="19" column="38" selection-start-line="19" selection-start-column="38" selection-end-line="19" selection-end-column="38" />
-          <folding>
-            <element signature="e#27#43#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/re/toph/hybrid_db/accumulator/package.scala">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0">
-          <caret line="15" column="88" selection-start-line="15" selection-start-column="88" selection-end-line="15" selection-end-column="88" />
+          <caret line="42" column="2" selection-start-line="42" selection-start-column="2" selection-end-line="42" selection-end-column="2" />
           <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/re/toph/hybrid_db/HelloWorld.scala">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.64094955">
-          <caret line="128" column="75" selection-start-line="128" selection-start-column="75" selection-end-line="128" selection-end-column="75" />
+        <state vertical-scroll-proportion="0.0">
+          <caret line="18" column="5" selection-start-line="18" selection-start-column="5" selection-end-line="18" selection-end-column="5" />
           <folding>
-            <element signature="e#27#54#0" expanded="true" />
+            <element signature="e#27#68#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/re/toph/hybrid_db/Result.scala">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0">
+          <caret line="2" column="0" selection-start-line="2" selection-start-column="0" selection-end-line="2" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/re/toph/hybrid_db/NullPrefetcher.scala">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0">
+          <caret line="22" column="62" selection-start-line="22" selection-start-column="62" selection-end-line="22" selection-end-column="62" />
+          <folding>
+            <element signature="e#27#43#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/re/toph/hybrid_db/LookaheadMultiPrefetcher.scala">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.6142433">
+          <caret line="23" column="9" selection-start-line="23" selection-start-column="9" selection-end-line="23" selection-end-column="9" />
+          <folding>
+            <element signature="e#27#60#0" expanded="true" />
           </folding>
         </state>
       </provider>

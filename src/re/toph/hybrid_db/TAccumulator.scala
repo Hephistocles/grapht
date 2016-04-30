@@ -1,10 +1,10 @@
 package re.toph.hybrid_db
 
 import java.util.HashMap
+
 /**
-  * Created by christoph on 29/04/16.
+  * Created by christoph on 30/04/16.
   */
-package object accumulator {
 
   trait TAccumulator {
     def acc:(HashMap[String, Object]) => TAccumulator
@@ -15,6 +15,12 @@ package object accumulator {
     override def acc: (HashMap[String, Object]) => TAccumulator = {
       n => new ConcatAccumulator(prop, sep, init + sep + n.get(prop).toString)
     }
+    override def result: Any = init
+  }
+
+  class SumAccumulator[T](prop:String, init:T)(implicit num: Numeric[T]) extends TAccumulator {
+    override def acc: (HashMap[String, Object]) => TAccumulator =
+      n => new SumAccumulator(prop, num.plus(init, n.get(prop).asInstanceOf[T]))
     override def result: Any = init
   }
 
@@ -35,4 +41,3 @@ package object accumulator {
       _ => this
     override def result: Any = init
   }
-}

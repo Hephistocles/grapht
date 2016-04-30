@@ -1,5 +1,7 @@
 package re.toph.hybrid_db
 
+import java.util
+
 import scala.collection.mutable.ListBuffer
 
 /**
@@ -9,18 +11,18 @@ import scala.collection.mutable.ListBuffer
 
 object NullPrefetcher extends Prefetcher {
 
-  override def get(k: Int): (GraphNode, List[GraphNode]) = {
+  override def get(k: Long): (GraphNode, List[GraphNode]) = {
     val statement = connection.createStatement()
-    val resultSet = Timer.time("DB", {statement.executeQuery("SELECT * FROM edges JOIN points ON points.id=edges.id1 WHERE id1=" + k)})
+    val resultSet = statement.executeQuery("SELECT * FROM edges JOIN points ON points.id=edges.id1 WHERE id1=" + k)
 
     // TODO: Actually obtain node/edge data too
     var edges = ListBuffer[Edge]()
-    var rs = resultSet
+    var map:util.HashMap[String, Object] = null
     while (resultSet.next()) {
-      rs  = resultSet
-      edges += Edge(resultSet.getInt("id1"), resultSet.getInt("id2"), getMap(resultSet))
+      map = getMap(resultSet)
+      edges += Edge(resultSet.getLong("id1"), resultSet.getLong("id2"), map)
     }
-    val n = new GraphNode(k, edges.toList, getMap(rs))
-    (n, List(n))
+    val n = new GraphNode(k, edges.toList, map)
+    (n, Nil)
   }
 }

@@ -6,7 +6,7 @@ import java.util
 /**
   * Created by christoph on 28/04/16.
   */
-case class GraphNode(id: Int, edges: List[Edge], properties:util.HashMap[String, Object]) {
+case class GraphNode(id: Long, edges: List[Edge], properties:util.HashMap[String, Object]) {
 
   override def toString() = {
     var endpoints = ""

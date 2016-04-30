@@ -27,5 +27,5 @@ trait Prefetcher {
     map
   }
   // To be implemented by sub-classes
-  def get(k: Int) : (GraphNode, List[GraphNode])
+  def get(k: Long) : (GraphNode, List[GraphNode])
 }

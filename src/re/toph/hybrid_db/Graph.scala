@@ -6,9 +6,9 @@ import scala.collection.mutable.HashMap
   * Created by christoph on 28/04/16.
   */
 class Graph(p :Prefetcher) {
-  var nodes: HashMap[Int, GraphNode] = HashMap()
+  var nodes: HashMap[Long, GraphNode] = HashMap()
 
-  def getVertex(k:Int) = {
+  def getVertex(k:Long) = {
     nodes.get(k) match {
       case Some(n) => n
       case None    => {
@@ -16,7 +16,6 @@ class Graph(p :Prefetcher) {
         ns foreach (n => addNode(n) )
           n
       }
-                      // TODO: Actually check the DB before assuming there's nothing
     }
   }
   def addNode(n: GraphNode) = nodes += (n.id -> n)

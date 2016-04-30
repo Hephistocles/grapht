@@ -13,7 +13,7 @@ import scala.collection.mutable.ListBuffer
 
 class LookaheadJoinPrefetcher(hops: Int) extends Prefetcher {
 
-  override def get(k: Int): (GraphNode, List[GraphNode]) = {
+  override def get(k: Long): (GraphNode, List[GraphNode]) = {
     val statement = connection.createStatement()
 
     // TODO: Actually use the "hops" parameter
@@ -21,7 +21,7 @@ class LookaheadJoinPrefetcher(hops: Int) extends Prefetcher {
 
     // TODO: I don't like blocking on prefetching. Can we do prefetch in a BG thread or something?
 
-    val ess:HashMap[Int, (ListBuffer[Edge], HashMap[String, Object])] = new HashMap[Int, (ListBuffer[Edge], HashMap[String, Object])]
+    val ess:HashMap[Long, (ListBuffer[Edge], HashMap[String, Object])] = new HashMap[Long, (ListBuffer[Edge], HashMap[String, Object])]
 
     while (resultSet.next()) {
 
@@ -29,17 +29,17 @@ class LookaheadJoinPrefetcher(hops: Int) extends Prefetcher {
       val map = getMap(resultSet)
 
       // create un-edged initial node if necessary
-      if (! ess.containsKey(resultSet.getInt("id1"))) {
-        ess.put(resultSet.getInt("id1"), (ListBuffer[Edge](), map))
+      if (! ess.containsKey(resultSet.getLong("id1"))) {
+        ess.put(resultSet.getLong("id1"), (ListBuffer[Edge](), map))
       }
 
-      ess.get(resultSet.getInt("id1"))._1 += Edge(resultSet.getInt("id1"), resultSet.getInt("id2"), map)
+      ess.get(resultSet.getLong("id1"))._1 += Edge(resultSet.getLong("id1"), resultSet.getLong("id2"), map)
     }
 
     val ns = ListBuffer[GraphNode]()
     var n : GraphNode = null
     import scala.collection.JavaConversions._
-    ess.foreach( (x:(Int, (ListBuffer[Edge], HashMap[String, Object]))) => {
+    ess.foreach( (x:(Long, (ListBuffer[Edge], HashMap[String, Object]))) => {
       val (_k, (es, map)) = x
       val _n = new GraphNode(_k, es.toList, map)
       if (k==_k) n = _n

@@ -1,7 +1,5 @@
 package re.toph.hybrid_db
 
-import java.sql.ResultSet
-
 import scala.collection.mutable._
 import java.util.HashMap
 
@@ -12,10 +10,10 @@ import java.util.HashMap
 
 class LookaheadMultiPrefetcher(hops: Int) extends Prefetcher {
 
-  override def get(k: Int): (GraphNode, List[GraphNode]) = {
-    val edgeMap: HashMap[Int, (ListBuffer[Edge], HashMap[String, Object])] = new HashMap[Int, (ListBuffer[Edge], HashMap[String, Object])]()
+  override def get(k: Long): (GraphNode, List[GraphNode]) = {
+    val edgeMap: HashMap[Long, (ListBuffer[Edge], HashMap[String, Object])] = new HashMap[Long, (ListBuffer[Edge], HashMap[String, Object])]()
 
-    val idsWeWant = Set[Int](k)
+    val idsWeWant = Set[Long](k)
 
     for (i <- 0 to hops) {
       val statement = connection.createStatement()
@@ -31,15 +29,15 @@ class LookaheadMultiPrefetcher(hops: Int) extends Prefetcher {
         val map = getMap(result)
 
         // create a new node entry if we've not seen this departure point before
-        if (! edgeMap.containsKey(result.getInt("id1"))) {
-          edgeMap.put(result.getInt("id1"), (ListBuffer[Edge](), map))
+        if (! edgeMap.containsKey(result.getLong("id1"))) {
+          edgeMap.put(result.getLong("id1"), (ListBuffer[Edge](), map))
         }
 
-        edgeMap.get(result.getInt("id1"))._1 += Edge(result.getInt("id1"), result.getInt("id2"), map)
+        edgeMap.get(result.getLong("id1"))._1 += Edge(result.getLong("id1"), result.getLong("id2"), map)
 
-        if (! edgeMap.containsKey(result.getInt("id2"))) {
+        if (! edgeMap.containsKey(result.getLong("id2"))) {
           // This destination has not been explored yet
-          idsWeWant += result.getInt("id2")
+          idsWeWant += result.getLong("id2")
         }
       }
     }
@@ -47,7 +45,7 @@ class LookaheadMultiPrefetcher(hops: Int) extends Prefetcher {
     val ns = ListBuffer[GraphNode]()
     var n : GraphNode = null
     import scala.collection.JavaConversions._
-    edgeMap.foreach( (x:(Int, (ListBuffer[Edge], HashMap[String, Object]))) => {
+    edgeMap.foreach( (x:(Long, (ListBuffer[Edge], HashMap[String, Object]))) => {
       val (_k, (es, map)) = x
       val _n = new GraphNode(_k, es.toList, map)
       if (k==_k) n = _n
