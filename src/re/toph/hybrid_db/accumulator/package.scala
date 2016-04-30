@@ -13,7 +13,7 @@ package object accumulator {
 
   class ConcatAccumulator(prop:String, sep:String, init:String) extends TAccumulator {
     override def acc: (HashMap[String, Object]) => TAccumulator = {
-      n => new ConcatAccumulator(prop, sep, init + sep + n.get(prop).asInstanceOf[String])
+      n => new ConcatAccumulator(prop, sep, init + sep + n.get(prop).toString)
     }
     override def result: Any = init
   }
