@@ -13,7 +13,7 @@ trait Prefetcher {
   val pass   = "LockDown1"
 
   Class.forName(driver)
-  var connection:Connection =  DriverManager.getConnection(url, user, pass)
+  val connection:Connection =  DriverManager.getConnection(url, user, pass)
 
   def getMap(resultSet:ResultSet): util.HashMap[String, Object] = {
     val map = new util.HashMap[String, Object]()
@@ -26,6 +26,7 @@ trait Prefetcher {
     }
     map
   }
+
   // To be implemented by sub-classes
   def get(k: Long) : (GraphNode, List[GraphNode])
 }
