@@ -87,7 +87,7 @@ object HelloWorld {
   def getHopDists(n: Long, id: Int, p: Prefetcher): List[Map[String, Any]] = {
     val g = new Graph(p)
 
-    def expand(sofar: Result, vertex: GraphNode): ListBuffer[Map[String, Any]] = {
+    def expand(vertex: GraphNode, sofar: Result, condition:CompletionCondition): ListBuffer[Map[String, Any]] = {
 
       // calculate a new intermediate result, taking into account this vertex's properties
       val vertexResult = sofar.mapVertex((acc) => acc.acc(vertex.properties))
@@ -95,8 +95,9 @@ object HelloWorld {
       val pathResults = ListBuffer[Map[String, Any]]()
 
       // TODO: generalise completion conditions
-      if (vertexResult.get("start").asInstanceOf[Long] == id &&
-        vertexResult.get("length").asInstanceOf[Int] <= n) {
+      if (condition.check(vertexResult)) {
+//      if (vertexResult.get("start").asInstanceOf[Long] == id &&
+//        vertexResult.get("length").asInstanceOf[Int] <= n) {
 
         pathResults += vertexResult.result
       }
@@ -114,7 +115,7 @@ object HelloWorld {
         // explore neighbours to find more path results and merge the results in!
         // TODO: generalise this with a priority queue or something
         val neighbour = g.getVertex(e.to)
-        pathResults ++= expand(edgeResult, neighbour)
+        pathResults ++= expand(neighbour, edgeResult, condition)
       })
 
       pathResults
@@ -131,6 +132,38 @@ object HelloWorld {
         "path" -> new ConcatAccumulator("id2", ",", "")
       ))
 
-    expand(results, g.getVertex(id)).toList
+    trait CompletionCondition {
+      def check(r:Result):Boolean
+    }
+
+
+    class OrCondition(c1:CompletionCondition, c2: CompletionCondition) extends CompletionCondition {
+      def check(r:Result) = c1.check(r) && c2.check(r)
+    }
+    class AndCondition(c1:CompletionCondition, c2: CompletionCondition) extends CompletionCondition {
+      def check(r:Result) = c1.check(r) && c2.check(r)
+    }
+    class GreaterThanCondition[T](prop:String, item:T)(implicit num:Numeric[T]) extends CompletionCondition {
+      def check(r: Result) = num.gt(r.get(prop).asInstanceOf[T], item)
+    }
+    class GreaterThanOrEqualCondition[T](prop:String, item:T)(implicit num:Numeric[T]) extends CompletionCondition {
+      def check(r: Result) = num.gteq(r.get(prop).asInstanceOf[T], item)
+    }
+    class LessThanCondition[T](prop:String, item:T)(implicit num:Numeric[T]) extends CompletionCondition {
+      def check(r: Result) = num.lt(r.get(prop).asInstanceOf[T], item)
+    }
+    class LessThanOrEqualCondition[T](prop:String, item:T)(implicit num:Numeric[T]) extends CompletionCondition {
+      def check(r: Result) = num.lteq(r.get(prop).asInstanceOf[T], item)
+    }
+    class EqualityCondition[T](prop:String, item:T) extends CompletionCondition {
+      def check(r: Result) = r.get(prop).asInstanceOf[T] == item
+    }
+
+    val condition = new AndCondition(
+      new EqualityCondition[Long]("start", id),
+      new LessThanOrEqualCondition[Int]("length", 3)
+    )
+
+    expand(g.getVertex(id), results, condition).toList
   }
 }
