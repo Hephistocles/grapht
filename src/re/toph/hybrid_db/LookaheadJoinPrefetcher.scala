@@ -21,7 +21,7 @@ class LookaheadJoinPrefetcher(hops: Int) extends Prefetcher {
 
     // TODO: I don't like blocking on prefetching. Can we do prefetch in a BG thread or something?
 
-    val ess:HashMap[Int, (ListBuffer[Edge], HashMap[String, String])] = new HashMap[Int, (ListBuffer[Edge], HashMap[String, String])]
+    val ess:HashMap[Int, (ListBuffer[Edge], HashMap[String, Object])] = new HashMap[Int, (ListBuffer[Edge], HashMap[String, Object])]
 
     while (resultSet.next()) {
 
@@ -39,7 +39,7 @@ class LookaheadJoinPrefetcher(hops: Int) extends Prefetcher {
     val ns = ListBuffer[GraphNode]()
     var n : GraphNode = null
     import scala.collection.JavaConversions._
-    ess.foreach( (x:(Int, (ListBuffer[Edge], HashMap[String, String]))) => {
+    ess.foreach( (x:(Int, (ListBuffer[Edge], HashMap[String, Object]))) => {
       val (_k, (es, map)) = x
       val _n = new GraphNode(_k, es.toList, map)
       if (k==_k) n = _n

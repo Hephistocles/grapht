@@ -15,16 +15,15 @@ trait Prefetcher {
   Class.forName(driver)
   var connection:Connection =  DriverManager.getConnection(url, user, pass)
 
-  def getMap(resultSet:ResultSet): util.HashMap[String, String] = {
-    val map = new util.HashMap[String, String]()
-    map.put("id", resultSet.getString("id"))
-//    val meta = resultSet.getMetaData
-//    for (i <- 1 to meta.getColumnCount) {
-//      map.put(
-//        meta.getColumnName(i),
-//        resultSet.getString(i)
-//      )
-//    }
+  def getMap(resultSet:ResultSet): util.HashMap[String, Object] = {
+    val map = new util.HashMap[String, Object]()
+    val meta = resultSet.getMetaData
+    for (i <- 1 to meta.getColumnCount) {
+      map.put(
+        meta.getColumnName(i),
+        resultSet.getObject(i)
+      )
+    }
     map
   }
   // To be implemented by sub-classes

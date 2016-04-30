@@ -13,7 +13,7 @@ import java.util.HashMap
 class LookaheadMultiPrefetcher(hops: Int) extends Prefetcher {
 
   override def get(k: Int): (GraphNode, List[GraphNode]) = {
-    val edgeMap: HashMap[Int, (ListBuffer[Edge], HashMap[String, String])] = new HashMap[Int, (ListBuffer[Edge], HashMap[String, String])]()
+    val edgeMap: HashMap[Int, (ListBuffer[Edge], HashMap[String, Object])] = new HashMap[Int, (ListBuffer[Edge], HashMap[String, Object])]()
 
     val idsWeWant = Set[Int](k)
 
@@ -47,7 +47,7 @@ class LookaheadMultiPrefetcher(hops: Int) extends Prefetcher {
     val ns = ListBuffer[GraphNode]()
     var n : GraphNode = null
     import scala.collection.JavaConversions._
-    edgeMap.foreach( (x:(Int, (ListBuffer[Edge], HashMap[String, String]))) => {
+    edgeMap.foreach( (x:(Int, (ListBuffer[Edge], HashMap[String, Object]))) => {
       val (_k, (es, map)) = x
       val _n = new GraphNode(_k, es.toList, map)
       if (k==_k) n = _n

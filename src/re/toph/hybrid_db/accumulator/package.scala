@@ -7,28 +7,32 @@ import java.util.HashMap
 package object accumulator {
 
   trait TAccumulator {
-    def acc:(String, HashMap[String, String]) => String
+    def acc:(HashMap[String, Object]) => TAccumulator
+    def result: Any
   }
 
-  class ConcatAccumulator(prop:String, sep:String) extends TAccumulator {
-    override def acc: (String, HashMap[String, String]) => String = {
-      (a, n) => a + sep + n.get(prop)
+  class ConcatAccumulator(prop:String, sep:String, init:String) extends TAccumulator {
+    override def acc: (HashMap[String, Object]) => TAccumulator = {
+      n => new ConcatAccumulator(prop, sep, init + sep + n.get(prop).asInstanceOf[String])
     }
+    override def result: Any = init
   }
 
-//  class CountAccumulator() extends TAccumulator {
-//    override def acc: (Object,HashMap[String, Object]) => Object = (a, n) => {
-//      new Integer(a.asInstanceOf[Integer].intValue() + 1)
-//    }
-//  }
-//
-//  class LastAccumulator(prop:String) extends TAccumulator {
-//    override def acc: (Object,HashMap[String, Object]) => Object =
-//      (_,n) => n.get(prop)
-//  }
-//
-//  class ConstAccumulator extends TAccumulator {
-//    override def acc: (Object, HashMap[String, Object]) => Object =
-//      (a,_) => a
-//  }
+  class CountAccumulator(init:Int) extends TAccumulator {
+    override def acc: (HashMap[String, Object]) => TAccumulator =
+      n => new CountAccumulator(init + 1)
+    override def result: Any = init
+  }
+
+  class LastAccumulator[T](prop:String, init:T) extends TAccumulator {
+    override def acc: (HashMap[String, Object]) => TAccumulator =
+      n => new LastAccumulator[T](prop, n.get(prop).asInstanceOf[T])
+    override def result: Any = init
+  }
+
+  class ConstAccumulator[T](init:T) extends TAccumulator {
+    override def acc: (HashMap[String, Object]) => TAccumulator =
+      _ => this
+    override def result: Any = init
+  }
 }
