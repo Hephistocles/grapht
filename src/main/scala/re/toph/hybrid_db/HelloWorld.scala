@@ -4,22 +4,62 @@ import java.sql.{DriverManager, Connection}
 
 import scala.collection.immutable.HashMap
 import scala.collection.mutable.ListBuffer
-
+import anorm.{ SQL, SqlParser }
+import org.anormcypher._
+import play.api.libs.ws._
 
 /**
   * Created by christoph on 28/04/16.
   */
 object HelloWorld {
 
+  val driver = "org.postgresql.Driver"
+  val url    = "jdbc:postgresql://localhost/christoph"
+  val user   = "christoph"
+  val pass   = "LockDown1"
+
+  Class.forName(driver)
+  implicit val connection:Connection =  DriverManager.getConnection(url, user, pass)
+
   def main(args: Array[String]): Unit = {
 
+    // Provide an instance of WSClient
+    //    val wsclient = ning.NingWSClient()
+    implicit val wsclient = ning.NingWSClient()
+    try {
+
+      // Setup the Rest Client
+      //    implicit val connection = Neo4jREST()(wsclient)
+      implicit val connection2 = Neo4jREST("localhost", 7474, "neo4j", "LockDown1")
+
+      // Provide an ExecutionContext
+      implicit val ec = scala.concurrent.ExecutionContext.global
+
+      // a simple query
+      val req = Cypher("match (p:Point {id:12}) RETURN p")
+
+      // get a stream of results back
+      val stream = req()
+
+      // get the results and put them into a list
+      stream.foreach(println)
+      //    println(stream.map(row => {row[String]("n.name")}).toList)
+    } catch {
+      case x:Throwable => println("Nope")
+    } finally {
+      wsclient.close()
+    }
+
+
+
+    // shut down WSClient
     val iterations = 3
     var res = List[Map[String, Any]]()
 
-    for (it <- 0 to iterations) {
+    for (it <- 1 to iterations) {
 
       Timer.time("SQL Joins", {
-        getHopDistsSQL()
+        getHopDistsSQL(connection)
       })
 
       //    res = Timer.time("No prefetch", {
@@ -39,14 +79,7 @@ object HelloWorld {
 //    res.foreach(println)
   }
 
-  val driver = "org.postgresql.Driver"
-  val url    = "jdbc:postgresql://localhost/christoph"
-  val user   = "christoph"
-  val pass   = "LockDown1"
-
-  Class.forName(driver)
-  val connection:Connection =  DriverManager.getConnection(url, user, pass)
-  def getHopDistsSQL2() = {
+  def getHopDistsSQL2(connection: Connection) = {
     val s = connection.createStatement()
     val rs = s.executeQuery(
       """
@@ -71,9 +104,8 @@ object HelloWorld {
     //    }
   }
 
-  def getHopDistsSQL() = {
-    val s = connection.createStatement()
-    val rs = s.executeQuery(
+  def getHopDistsSQL(implicit connection: Connection) : List[Map[String, Any]] = {
+     SQL(
       """
         |SELECT A.id1 s, D.id2 e,
         |   4 l, CONCAT(A.id1, '->', B.id1, '->', C.id1, '->', C.id2, '->', D.id2) p, A.dist + B.dist + C.dist + D.dist dist
@@ -90,10 +122,16 @@ object HelloWorld {
         | JOIN points nD ON D.id1=nD.id
         | JOIN points nE ON D.id2=nE.id
         | WHERE A.id1 = 1
-      """.stripMargin)
-//    while (rs.next()) {
-//      println(rs.getString("p"))
-//    }
+      """.stripMargin)()
+       .map(row =>
+         Map(
+           "s"->row[Long]("s"),
+           "e"->row[Long]("e"),
+           "l"->row[Int]("l"),
+           "p"->row[String]("p"),
+           "dist"->row[Long]("dist")
+         )).toList
+//      .on("countryCode" -> 1).as(SqlParser.int("foo").single)
   }
 
   /*

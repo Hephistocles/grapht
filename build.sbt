@@ -8,5 +8,6 @@ resolvers ++= Seq(
 )
 
 libraryDependencies ++= Seq(
-  "org.anormcypher" %% "anormcypher" % "0.9.0"
+  "com.typesafe.play" %% "anorm" % "2.4.0",
+"org.anormcypher" %% "anormcypher" % "0.9.0"
 )
