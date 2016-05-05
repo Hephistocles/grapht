@@ -51,7 +51,7 @@ object HelloWorld {
 
       for (i <- 3 to 5) {
         res = Timer.time("Lookahead Multi (" + i + ")", {
-          getHopDists(4, 20, new LookaheadMultiPrefetcher(i))
+          getHopDists(, 20, new LookaheadMultiPrefetcher(i))
         })
       }
     }
