@@ -2,7 +2,8 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/hdb-scala.iml" filepath="$PROJECT_DIR$/hdb-scala.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/hdb-sbt.iml" filepath="$PROJECT_DIR$/.idea/modules/hdb-sbt.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/hdb-sbt-build.iml" filepath="$PROJECT_DIR$/.idea/modules/hdb-sbt-build.iml" />
     </modules>
   </component>
 </project>
