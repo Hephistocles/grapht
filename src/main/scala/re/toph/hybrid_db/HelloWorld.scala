@@ -51,7 +51,7 @@ object HelloWorld {
 
       for (i <- 3 to 5) {
         res = Timer.time("Lookahead Multi (" + i + ")", {
-          getHopDists(, 20, new LookaheadMultiPrefetcher(i))
+          getHopDists(4, 20, new LookaheadMultiPrefetcher(i))
         })
       }
     }
@@ -86,25 +86,41 @@ object HelloWorld {
 //  RETURN p.id as s, p2.id as e, l, reduce(res=0, x in scores: res + x) as dist
 
   def getHopDistsSQL(hops:Int, n:Long)(implicit connection: Connection) : List[Map[String, Any]] = {
-    if (hops != 4) throw new Exception("We only support 4 hops!")
      SQL(
-      """
-        |SELECT A.id1 s, D.id2 e,
-        |   4 l, CONCAT(A.id1, '->', B.id1, '->', C.id1, '->', C.id2, '->', D.id2) p, A.dist + B.dist + C.dist + D.dist dist
-        | FROM edges A
-        | JOIN edges B
-        |   ON A.id2 = B.id1
-        | JOIN edges C
-        |   ON B.id2 = C.id1
-        | JOIN edges D
-        |   ON C.id2 = D.id1
-        | JOIN points nA ON A.id1=nA.id
-        | JOIN points nB ON B.id1=nB.id
-        | JOIN points nC ON C.id1=nC.id
-        | JOIN points nD ON D.id1=nD.id
-        | JOIN points nE ON D.id2=nE.id
-        | WHERE A.id1 = {id}
-      """.stripMargin)
+     """
+       |-- calculate generation / depth, no updates
+       |WITH RECURSIVE ans
+       |  (s, e, l, p, dist)
+       | AS ( SELECT id1, id2, 0, CONCAT(id1, '->', id2), dist
+       |      FROM edges
+       |      WHERE id1 = {id}
+       |
+       |      UNION ALL
+       |
+       |      SELECT ans.s, edges.id2, ans.l+1, CONCAT(ans.p, '->', edges.id2), ans.dist + edges.dist
+       |      FROM edges
+       |      JOIN ans ON ans.e=edges.id1
+       |      WHERE ans.l < {hops}
+       |    )
+       |SELECT * FROM ans;
+     """.stripMargin)
+//      """
+//        |SELECT A.id1 s, D.id2 e,
+//        |   4 l, CONCAT(A.id1, '->', B.id1, '->', C.id1, '->', C.id2, '->', D.id2) p, A.dist + B.dist + C.dist + D.dist dist
+//        | FROM edges A
+//        | JOIN edges B
+//        |   ON A.id2 = B.id1
+//        | JOIN edges C
+//        |   ON B.id2 = C.id1
+//        | JOIN edges D
+//        |   ON C.id2 = D.id1
+//        | JOIN points nA ON A.id1=nA.id
+//        | JOIN points nB ON B.id1=nB.id
+//        | JOIN points nC ON C.id1=nC.id
+//        | JOIN points nD ON D.id1=nD.id
+//        | JOIN points nE ON D.id2=nE.id
+//        | WHERE A.id1 = {id}
+//      """.stripMargin)
     .on("id"->n, "hops" -> hops)
     .apply()
        .map(row =>
