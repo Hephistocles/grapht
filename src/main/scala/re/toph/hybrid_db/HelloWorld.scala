@@ -37,14 +37,19 @@ object HelloWorld {
       for (it <- 1 to iterations) {
 
         Timer.time("Cypher", {
-          getHopDistsCypher(hops, id)(connection)
+          getHopDistsCypher(hops, id)
         })
 //          .foreach(println)
 
         Timer.time("SQL Joins", {
-          getHopDistsSQL(hops, id)(connection)
+          getHopDistsSQL(hops, id)
         })
 //          .foreach(println)
+
+        Timer.time("Lookahead Join", {
+          getHopDists(hops, id, new LookaheadJoinPrefetcher(3))
+        })
+          .foreach(println)
 
         for (i <- 3 to 6) {
           Timer.time("Lookahead Multi (" + i + ")", {
@@ -129,11 +134,11 @@ object HelloWorld {
     val g = new Graph(p)
 
     val results = new Result(
-      edgeProps = HashMap(
+      edgeProps = Map[String, TAccumulator](
         "length" -> new CountAccumulator(0),
         "path" -> new ConcatAccumulator("id2", "->", "(" + id + ")")
       ),
-      vertexProps = HashMap(
+      vertexProps = Map[String, TAccumulator](
         "start" -> new ConstAccumulator(id),
         "end" -> new LastAccumulator("id", id),
         "dist" -> new SumAccumulator("dist", 0L)

@@ -17,7 +17,7 @@ object NullPrefetcher extends Prefetcher {
 
     // TODO: Actually obtain node/edge data too
     var edges = ListBuffer[Edge]()
-    var map:util.HashMap[String, Object] = null
+    var map:Map[String, Any] = null
     while (resultSet.next()) {
       map = getMap(resultSet)
       edges += Edge(resultSet.getLong("id1"), resultSet.getLong("id2"), map)

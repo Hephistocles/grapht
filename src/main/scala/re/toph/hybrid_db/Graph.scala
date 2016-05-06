@@ -6,7 +6,7 @@ import scala.collection.mutable.HashMap
   * Created by christoph on 28/04/16.
   */
 class Graph(p :Prefetcher) {
-  var nodes: HashMap[Long, GraphNode] = HashMap()
+  var nodes = Map[Long, GraphNode]()
 
   def getVertex(k:Long) = {
     nodes.get(k) match {
