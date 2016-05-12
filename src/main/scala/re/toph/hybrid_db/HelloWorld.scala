@@ -3,14 +3,10 @@ package re.toph.hybrid_db
 import java.io.File
 import java.sql.{Connection, DriverManager}
 
-import anorm.SQL
 import org.anormcypher._
 import org.neo4j.graphdb._
 import org.neo4j.graphdb.factory.GraphDatabaseFactory
-import org.neo4j.graphdb.traversal.{Uniqueness, Traverser, Evaluators}
 import play.api.libs.ws._
-import scala.collection.JavaConverters._
-import scala.collection.mutable.ListBuffer
 
 /**
   * Created by christoph on 28/04/16.
@@ -37,6 +33,8 @@ object HelloWorld {
 //      Neo4JLoader.injectdata("points.co", "roads.gr")
 
       FriendOfFriend.go()
+      Timer.printResults(depth=1)
+      Timer.clearTimes()
 //
 //        for (it <- 1 to 3) {
 //          println(

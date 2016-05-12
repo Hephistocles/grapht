@@ -9,7 +9,6 @@ import org.neo4j.graphdb.{Direction, GraphDatabaseService}
 import play.api.libs.ws.ning.NingWSClient
 
 import scala.collection.JavaConverters._
-import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext
 
 /**
@@ -20,7 +19,7 @@ trait BenchmarkTest {
     (l, iterations) => {
       for (i <- 0 to iterations) {
         l.foreach({
-          case (s, f) => Timer.time(s, f(), printResults=false)
+          case (s, f) => Timer.time(s, f())
         })
       }
     }
@@ -32,29 +31,26 @@ package object FriendOfFriend extends BenchmarkTest {
   val (hops, id) = (3, 1)
 
   def go()(implicit db: GraphDatabaseService, connection:Connection,connection2: Neo4jREST, wsclient:NingWSClient, ec:ExecutionContext): Unit = {
-    val prefetchers:ListBuffer[(String, Prefetcher)] = ListBuffer(
-    )
 
-    //TODO: lookahead join doesn't work atm
-//    prefetchers ++= (1 to 5)
-//      .map(b => (s"Lookahed Join ($b)", new LookaheadJoinPrefetcher(b)))
-    prefetchers ++= (3 to 5)
-      .map(b => (s"Lookahead ($b)", new LookaheadMultiPrefetcher(b)))
-    prefetchers ++= List(1, 10, 100, 1000, 5000, 10000, 20000)
-      .map(b => (s"Block ($b)", new LookaheadBlockPrefetcher(b)))
+    //TODO: lookahead join doesn't work atm. Please try again later.
+    val (lookaheads, blocks) = (
+      (3 to 5)
+        .map(b => (s"Lookahead ($b)", new LookaheadMultiPrefetcher(b))),
+      List(1, 10, 100, 1000, 5000, 10000, 20000)
+        .map(b => (s"Block ($b)", new LookaheadBlockPrefetcher(b))))
 
-    val tests = ListBuffer(
+    val prefetchers = List() ++ lookaheads ++ blocks
+
+    val tests = List(
       ("Neo", () => getHopDistsNeo(hops, id)),
       ("Cypher", () => getHopDistsCypher(hops, id)),
       ("SQL", () => getHopDistsSQL(hops, id)),
       ("SQL CTE", () => getHopDistsCTESQL(hops, id))
-    )
-
-    tests ++= prefetchers.toList.map({
-      case (s, p) => (s"** GRAPHT $s", () => getHopDists(hops, id, p))
+    ) ++ prefetchers.toList.map({
+      case (s, p) => (s"GRAPHT $s", () => getHopDists(hops, id, p))
     })
 
-    timeAll(tests.toList, 3)
+    timeAll(tests.toList, 1)
   }
 
   def getHopDistsNeo(hops:Int, n:Long)(implicit db: GraphDatabaseService):List[Map[String, Any]] = {

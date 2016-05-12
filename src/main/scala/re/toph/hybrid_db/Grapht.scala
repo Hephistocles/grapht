@@ -1,8 +1,6 @@
-package re.toph.hybrid_db.FriendOfFriend
+package re.toph.hybrid_db
 
 import java.sql.Connection
-
-import re.toph.hybrid_db.{CompletionCondition, Graph, NodeQueue, Result}
 
 import scala.collection.mutable.ListBuffer
 
