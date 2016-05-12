@@ -1,8 +1,8 @@
 package re.toph.hybrid_db
 
+import anorm.SQL
+
 import scala.collection.mutable.{ListBuffer, Set}
-import java.util.HashMap
-import anorm.{ SQL, SqlParser }
 
 /**
   * Created by christoph on 28/04/16.
@@ -53,8 +53,6 @@ class LookaheadMultiPrefetcher(hops: Int)(implicit connection:java.sql.Connectio
 
     val ns = ListBuffer[GraphNode]()
     var n : GraphNode = null
-    import scala.collection.JavaConversions._
-    // TODO: Actually use the "hops" parameter
     edgeMap.foreach( (x:(Long, (ListBuffer[Edge], Map[String, Any]))) => {
       val (_k, (es, map)) = x
       val _n = new GraphNode(_k, es.toList, map)
