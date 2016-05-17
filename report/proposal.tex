@@ -1,0 +1,131 @@
+\documentclass[11pt]{article}
+\usepackage{a4wide,parskip,times}
+\usepackage{color}
+\usepackage{tabulary}
+
+\usepackage[
+backend=biber,
+sorting=ynt
+]{biblatex}
+\addbibresource{main.bib}
+
+\begin{document}
+
+\begin{abstract}
+
+
+There has recently been an increasing need for fast analysis of 
+graph-structured data, which has led to the development of several graph-centric
+alternatives to traditional relational databases. Although these ensure the
+fast execution of queries which fit within this graph-centric model,
+inevitably a compromise has been made, and other queries perform less
+efficiently than they would have done with a relational database. I propose
+the development of a query language enabling intelligent dispatch of optimised
+queries either directly to a relational database, or through a graph-centric query processing
+layer.
+
+\end{abstract}
+
+\section{Introduction, approach and outcomes}
+
+Graph databases are an alternative to traditional relational databases,
+which improve access speeds for some queries by prioritising access to related
+entities, rather than expecting traversal through a fixed schema. This can
+provide huge performance improvements for graph-centric queries, such as 
+shortest path queries. For other queries, however -- such as aggregation of 
+unconnected data items -- it is far more efficient to rely on a
+ fixed schema for fast access. A recent project\cite{crackle} has shown that it
+is possible to unify both graph and relational database paradigms by providing
+graph-focused pre-fetching of data from an underlying relational database. 
+I now aim to further unify the systems in two ways.
+
+My first contribution is to present a declarative query language 
+targeting this hybrid system. Two interfaces to the data exist: going
+straight to the relational database, or through the graph-centric query
+layer. The language will be amenable to analysis, to
+allow an interpreter to determine which queries will be 
+handled more effectively by which interface, and to efficiently 
+dispatch these targeted queries.
+
+My second contribution is to extend the performance benefits
+by decomposing
+user queries and extracting opportunities for parallelisation
+Decades of research have worked on
+optimising SQL queries in this way, and some ideas from the domain of relational
+query planning will provide insights into increasing the performance of graph
+queries.
+
+Another challenge of the work is ensuring usability of the query language. Queries targeting a graph database queries are a very different
+to those for relational databases, as they are used to solve different sorts of problems. I will pay careful attention that both paradigms are sufficiently
+expressible, and that the resulting language is coherent.
+
+To evaluate my project, firstly, it will be important to show that the system provides a performance improvement
+over current solutions. I will make comparisons against Neo4J\cite{neo4j} and PostgreSQL\cite{postgres}. I expect the two systems to run slightly faster on queries for which they are specialised, but that my system will significantly outperform them on queries for which they are not particularly optimised. I will also present an independent performance evaluation of my optimisations,
+exploring their impact and limitations. Finally, I will evaluate the usability of the resulting
+language to ensure that the platform is sufficiently expressive
+without being incoherent.
+
+% What about discussion of read-only accesses vs updates too?
+
+If time allows, there are a few possible directions for extension. Firstly, 
+the nature of the query layer places no restriction on
+the type of the underlying data store. It would be interesting to explore the
+effect of using other data sources in place of a relational database.
+There may also be opportunities here for
+query optimisation which are not present when using PostgreSQL. Finally, 
+the discussion above has considered only the efficient retrieval of data.
+Clearly it would also be desirable to allow updates, though this introduces
+complexity with regards to the consistency of prefetched data. It would be
+instructive to start work in this direction in order to have some idea of
+the particular difficulties which would need overcoming.
+
+\section{Work Plan}
+
+The structure of my research will follow three main stages. Firstly, I will
+work on the dispatch mechanism for user queries. I intend to identify optimal
+dispatch strategies by taking a ``problem-first'' approach, and looking for
+patterns in the differences between the kinds of problems which tend to
+currently be approached using graph databases, and those which use relational
+databases. I expect this work to roughly continue until the start of Lent
+term.
+
+During the course of Lent term, I will consider the problem of query
+optimisation. I will proceed by performing tests to identify a few possible
+avenues for performance improvements, before implementing the most promising
+ones and measuring their effects. The design of the query language itself will
+be ongoing throughout the entirety of the project, to ensure both that the
+information retrieval problem space is adequately covered, and that
+opportunities for optimisation are adequately exposed.
+
+Finally, I will use the remaining time available to perform more detailed
+evaluation, refine the usability of the language, and prepare the write up.
+
+A detailed work plan is included overleaf. In this plan, bold items represent fairly
+objective milestones, which should help ensure that I do not fall behind.
+
+
+\begin{center}
+\begin{tabulary}{\linewidth}{|CLLL|}
+\hline
+ Week & Date & Work to complete & \\
+ \hline
+ 1  & 16th November--29th November & Background reading and prepare \textbf{revised proposal}. & \\[3ex]
+ 3  & 30th November--13th December & Set up development environment and \textbf{replicate Crackle results}. & \\[3ex]
+ 5  & 14th December--27th December & Expand Crackle results (different data/different queries). & \\[3ex]
+ 7  & 28th December--10th January & Collect results and \textbf{establish preliminary dispatch strategy}.  & \\[3ex]
+ 9  & 11th January--24th January & Read around area of query planning and optimisation. & \\[3ex]
+ 11 & 25th January--7th February & Perform tests to identify \textbf{two or three possible avenues for optimisation}. & \\[3ex]
+ 13 & 8th February--21st February & Implement first optimisations. & \\[3ex]
+ 15 & 22nd February--6th March & \textbf{Finish implementing optimisations} and \textbf{prepare progress report}.&\\[3ex]
+ 17 & 7th March--20th March & \textbf{Finish design of DSL}. & \\[3ex]
+ 19 & 21st March--3rd April & Conduct thorough performance evaluations. & \\[3ex]
+ 21 & 4th April--17th April & Evaluate DSL and begin write-up. & \\[3ex]
+ 23 & 18th April--1st May & Continue write-up. Complete an \textbf{initial draft of 11-13,500 words}.  & \\[3ex]
+ 25 & 2nd May--15th May & Refine draft and correct word count. & \\[3ex]
+ 27 & 16th May--29th May & Final edits and \textbf{submission}. & \\[3ex]
+ (29)&30th May--6th June & Prepare \textbf{presentation}. & \\[3ex]
+ \hline
+\end{tabulary}
+\end{center}
+
+\end{document}

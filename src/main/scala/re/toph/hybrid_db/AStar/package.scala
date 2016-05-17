@@ -1,93 +1,157 @@
-package re.toph.hybrid_db.AStar
+package re.toph.hybrid_db
 
 import java.sql.Connection
 
-import anorm.SQL
+import anorm.{SqlParser, SQL}
 import org.anormcypher.{Cypher, Neo4jREST}
-import org.neo4j.graphdb.traversal.{Evaluators, Uniqueness}
-import org.neo4j.graphdb.{Direction, GraphDatabaseService}
+import org.neo4j.graphalgo.{CommonEvaluators, EstimateEvaluator, GraphAlgoFactory}
+import org.neo4j.graphdb.{Direction, GraphDatabaseService, Node, PathExpanders}
 import play.api.libs.ws.ning.NingWSClient
-
 import scala.collection.JavaConverters._
+import re.toph.hybrid_db.Neo4JLoader.ROAD
+
 import scala.concurrent.ExecutionContext
 
 /**
   * Created by christoph on 12/05/16.
   */
-trait BenchmarkTest {
-  val timeAll: (List[(String, ()=>List[Map[String,Any]])], Int) => Unit =
-    (l, iterations) => {
-      for (i <- 0 to iterations) {
-        l.foreach({
-          case (s, f) => Timer.time(s, f())
-        })
-      }
-    }
-}
+
+package object AStar extends BenchmarkTest {
 
 
-package object FriendOfFriend extends BenchmarkTest {
+  val RADIUS = 6371
+  def heuristic(latitude1:Long, longitude1:Long, latitude2:Long, longitude2:Long ) : Double =
+  {
+    val (lat1, lng1, lat2, lng2) = (
+      Math.toRadians(latitude1/1000000.0),
+      Math.toRadians(longitude1/1000000.0),
+      Math.toRadians(latitude2/1000000.0),
+      Math.toRadians(longitude2/1000000.0))
+
+    val cLa1 = Math.cos(lat1)
+    val A = (
+      RADIUS * cLa1 * Math.cos(lng1),
+      RADIUS * cLa1 * Math.sin(lng1),
+      RADIUS * cLa1 * Math.sin(lat1))
+
+    val cLa2 = Math.cos(lat2)
+    val B = (
+      RADIUS * cLa2 * Math.cos(lng2),
+      RADIUS * cLa2 * Math.sin(lng2),
+      RADIUS * cLa2 * Math.sin(lat2))
+
+    val res = Math.sqrt((A._1 - B._1) * (A._1 - B._1) +
+              (A._2 - B._2) * (A._2 - B._2) +
+              (A._3 - B._3) * (A._3 - B._3))
+
+    res
+  }
 
   val (hops, id) = (3, 1)
 
   def go()(implicit db: GraphDatabaseService, connection:Connection,connection2: Neo4jREST, wsclient:NingWSClient, ec:ExecutionContext): Unit = {
 
-    //TODO: lookahead join doesn't work atm. Please try again later.
-    val (lookaheads, blocks) = (
-      (3 to 5)
-        .map(b => (s"Lookahead ($b)", new LookaheadMultiPrefetcher(b))),
-      List(1, 10, 100, 1000, 5000, 10000, 20000)
-        .map(b => (s"Block ($b)", new LookaheadBlockPrefetcher(b))))
+//    //TODO: lookahead join doesn't work atm. Please try again later.
+    val lookaheads = (45 to 50 by 5)
+        .map(b => (s"Lookahead ($b)", new LookaheadMultiPrefetcher(b)))
 
-    val prefetchers = List() ++ lookaheads ++ blocks
+//    val blocks = List(20000, 30000,50000)
+//        .map(b => (s"Block ($b)", new LookaheadBlockPrefetcher(b)))
 
+    val prefetchers = lookaheads // ++
+
+    val (from, to) = (1, 50)
     val tests = List(
-      ("Neo", () => getHopDistsNeo(hops, id)),
-      ("Cypher", () => getHopDistsCypher(hops, id)),
-      ("SQL", () => getHopDistsSQL(hops, id)),
-      ("SQL CTE", () => getHopDistsCTESQL(hops, id))
-    ) ++ prefetchers.toList.map({
-      case (s, p) => (s"GRAPHT $s", () => getHopDists(hops, id, p))
+      ("East to West Neo", () => neo2()),
+      ("East to West No Search", () => neo(58197, 4362)),
+        ("Neo", () => neo(from, to)),
+        ("PSQL", () => psql(from, to))
+//      ("SQL", () => unionSQL(hops, id)),
+//      ("SQL CTE", () => CTESQL(hops, id))
+    ) ++ prefetchers.flatMap({
+      case (s, p) =>
+        List(
+//          (s"Grapht $s", () => grapht(from, to, p)),
+          (s"Grapht Local $s", () => graphtLocal(from, to, p))
+        )
     })
 
-    timeAll(tests.toList, 1)
+    timeAll(tests.toList, 3)
   }
 
-  def getHopDistsNeo(hops:Int, n:Long)(implicit db: GraphDatabaseService):List[Map[String, Any]] = {
+  def neo2()(implicit db: GraphDatabaseService): (Int,Double) = {
     val tx = db.beginTx()
     try {
 
-      val junctionIndex =  db.index().forNodes("junctions")
-      val start = junctionIndex.get("id", n).getSingle()
+      var (i, j) = (Long.MaxValue, Long.MinValue)
+      var (minNode, maxNode):(Node, Node) = (null, null)
+      db.getAllNodes().asScala.foreach(n => {
+        val lat = n.getProperty("lat").asInstanceOf[Long]
+        //            println(lat)
+        if (lat<i) {
+          i = lat
+          minNode = n
+        }
+        if (j<lat) {
+          j = lat
+          maxNode = n
+        }
+      })
+      println(minNode, maxNode)
 
-      val td = db.traversalDescription()
-        .depthFirst()
-        .relationships(Neo4JLoader.ROAD, Direction.OUTGOING)
-        .uniqueness(Uniqueness.NONE)
-        .evaluator(Evaluators.toDepth(hops))
-
-      val res =
-        Timer.time("Query", {
-          td.traverse(start).iterator()
-        })
-          .asScala.map(r => {
-          Map(
-            "s" -> r.startNode().getProperty("id"),
-            "e" -> r.endNode().getProperty("id"),
-            "l" -> r.length(),
-            "p" -> r.nodes().asScala.tail.foldLeft(n.toString())((a, r) => s"$a -> " + r.getProperty("id")),
-            "dist" -> r.relationships().asScala.foldLeft(0L)((a, r) => a + r.getProperty("distance").asInstanceOf[Long])
+      val path = GraphAlgoFactory.aStar(
+        PathExpanders.forTypeAndDirection(ROAD, Direction.OUTGOING),
+        CommonEvaluators.doubleCostEvaluator("distance"),
+        new EstimateEvaluator[java.lang.Double] {
+          override def getCost(node1: Node, node2: Node): java.lang.Double = heuristic(
+            node1.getProperty("lat").asInstanceOf[Long],
+            node1.getProperty("long").asInstanceOf[Long],
+            node2.getProperty("lat").asInstanceOf[Long],
+            node2.getProperty("long").asInstanceOf[Long]
           )
-        }).toList
+        }
+      ).findSinglePath(minNode, maxNode)
 
       tx.success()
-      res
+      println(s"${path.weight()} in ${path.length()} hops")
+      println(path)
+      (path.length(), path.weight())
     } finally {
       tx.close()
     }
   }
 
-  def getHopDistsCypher(hops: Int, n: Long)(implicit connection: Neo4jREST, wsclient:NingWSClient, ec:ExecutionContext): List[Map[String, Option[AnyVal]]] = {
+  def neo(from:Long, to:Long)(implicit db: GraphDatabaseService): (Long, List[Long]) = {
+    val tx = db.beginTx()
+    try {
+
+      val junctionIndex =  db.index().forNodes("junctions")
+      val start = junctionIndex.get("id", from).getSingle()
+      val end = junctionIndex.get("id", to).getSingle()
+
+      val path = GraphAlgoFactory.aStar(
+        PathExpanders.forTypeAndDirection(ROAD, Direction.OUTGOING),
+        CommonEvaluators.doubleCostEvaluator("distance"),
+        new EstimateEvaluator[java.lang.Double] {
+          override def getCost(node1: Node, node2: Node): java.lang.Double = heuristic(
+            node1.getProperty("lat").asInstanceOf[Long],
+            node1.getProperty("long").asInstanceOf[Long],
+            node2.getProperty("lat").asInstanceOf[Long],
+            node2.getProperty("long").asInstanceOf[Long]
+          )
+        }
+      ).findSinglePath(start, end)
+
+      tx.success()
+      val rs = (path.weight().toLong, path.nodes().asScala.toList.map(_.getProperty("id").asInstanceOf[Long]))
+      println(s"Neo : ${rs._1} in ${rs._2.length} hops: ${rs._2.mkString("->")}")
+      rs
+    } finally {
+      tx.close()
+    }
+  }
+
+  def cypher(hops: Int, n: Long)(implicit connection: Neo4jREST, wsclient:NingWSClient, ec:ExecutionContext): List[Map[String, Option[AnyVal]]] = {
     Cypher(
       """MATCH path=(p:Point {id:{id}})-[r:Road*0..""" + hops +
         """]->(p2)
@@ -113,46 +177,25 @@ package object FriendOfFriend extends BenchmarkTest {
       .toList
   }
 
-  def getHopDistsSQL(hops: Int, n: Long)(implicit connection: Connection): List[Map[String, Any]] = {
-    SQL(
-      """
-        |(SELECT A.id1 s, D.id2 e, 4 l, 'Something' p, A.dist + B.dist + C.dist + D.dist dist FROM
-        | edges A
-        |   JOIN edges B ON A.id2=B.id1
-        |   JOIN edges C ON B.id2=C.id1
-        |   JOIN edges D ON C.id2=D.id1
-        |   WHERE A.id1={id})
-        |UNION
-        |(SELECT A.id1 s, C.id2 e, 3 l, 'Something' p, A.dist + B.dist + C.dist dist FROM
-        | edges A
-        |   JOIN edges B ON A.id2=B.id1
-        |   JOIN edges C ON B.id2=C.id1
-        |   WHERE A.id1={id})
-        |UNION
-        |(SELECT A.id1 s, B.id2 e, 2 l, 'Something' p, A.dist + B.dist dist FROM
-        | edges A
-        |   JOIN edges B ON A.id2=B.id1
-        |   WHERE A.id1={id})
-        |UNION
-        |(SELECT A.id1 s, A.id2 e, 1 l, 'Something' p, A.dist dist FROM
-        | edges A
-        |   WHERE A.id1={id})
-        |UNION
-        |(SELECT {id} s, {id} e, 0 l, 'Something' p, 0 dist)
-      """.stripMargin)
-      .on("id" -> n, "hops" -> hops)
-      .apply()
-      .map(row =>
-        Map(
-          "s" -> row[Long]("s"),
-          "e" -> row[Long]("e"),
-          "l" -> row[Int]("l"),
-          "p" -> row[String]("p"),
-          "dist" -> row[Long]("dist")
-        )).toList
+  def psql(from:Long, to: Long)(implicit connection: Connection): (Long, List[Long]) = {
+    val rs = SQL(
+      "SELECT distance::bigint, path::bigint[] FROM (SELECT (astarroute({from}, {to})).*) t;")
+      .on("from" -> from, "to" -> to)()
+      .map((row) => {
+        (row[Long]("distance"), row[Array[Long]]("path").toList)
+      }).head
+
+    println(s"PSQL: ${rs._1} in ${rs._2.length} hops: ${rs._2.mkString("->")}")
+    rs
   }
 
-  def getHopDistsCTESQL(hops: Int, n: Long)(implicit connection: Connection): List[Map[String, Any]] = {
+  def sqlheuristic(lat1:Long, lng1:Long, lat2:Long, lng2:Long)(implicit conenction:Connection) = {
+    SQL("SELECT latlongdist({a},{b},{c},{d})")
+    .on("a"-> lat1, "b"->lng1, "c"->lat2, "d"->lng2)()
+    .toList
+  }
+
+  def CTESQL(hops: Int, n: Long)(implicit connection: Connection): List[Map[String, Any]] = {
     SQL(
       """
         |-- calculate generation / depth, no updates
@@ -184,30 +227,105 @@ package object FriendOfFriend extends BenchmarkTest {
   /*
     SELECT start, end, length, (ACC VERTICES CONCAT id " -> ") path, (ACC EDGES SUM dist) cost FROM
     PATHS OVER myGraph
-    WHERE start = ?
-    AND length <= ?);
+    WHERE START = {from}
+    AND END = {to}
+    TRAVERSE UNIQUE VERTICES BY MIN (ACC EDGES SUM dist) + latlongdist(VERTEX(lat), VERTEX(lng), myLat, myLng)
+    LIMIT 1;
+
   */
-  def getHopDists(n: Int, id: Long, p: Prefetcher)(implicit connection:Connection): List[Map[String, Any]] = {
+  def graphtLocal(from:Long, to:Long, p: Prefetcher)(implicit connection:Connection): (Long, Array[Long]) = {
+    // first get the lat/lng of the target node
+    val (targetLat, targetLong) = SQL("SELECT lat, lng FROM points WHERE id={id}")
+      .on("id"->to)
+      .apply()
+      .map(r => (r[Long]("lat"), r[Long]("lng"))).head
+
     val g = new Graph(p)
 
     val results = new Result(
       edgeProps = Map[String, TAccumulator](
         "length" -> new CountAccumulator(0),
-        "path" -> new ConcatAccumulator("id2", "->", "(" + id + ")")
+        "path" -> new ConcatAccumulator("id2", ",", id.toString()),
+        "dist" -> new SumAccumulator[Long]("dist", 0)
       ),
       vertexProps = Map[String, TAccumulator](
-        "start" -> new ConstAccumulator(id),
-        "end" -> new LastAccumulator("id", id),
-        "dist" -> new SumAccumulator("dist", 0L)
+        "start" -> new ConstAccumulator(from),
+        "end" -> new LastAccumulator("id", from)
       ))
+
+    def prioritiser(edge:Edge, vertex:GraphNode, sofar: Result)(implicit connection:Connection): Double = {
+      val h = heuristic(vertex.properties("lat").asInstanceOf[Long],vertex.properties("lng").asInstanceOf[Long], targetLat, targetLong)
+      //      + edge.properties("dist").asInstanceOf[Long]
+      val g = sofar.get("dist").asInstanceOf[Long]
+
+      h + g
+    }
+
 
     val condition =
       new AndCondition(
-        new EqualityCondition[Long]("start", id, Constant()),
-        new LessThanOrEqualCondition[Int]("length", n, Increasing(Some(1)))
+        new EqualityCondition[Long]("start", from, Constant()),
+        new EqualityCondition[Long]("end", to, Variable())
+        //        new LessThanOrEqualCondition[Int]("length", 3, Increasing(Some(1)))
       )
 
-    Grapht.query(g, id, results, condition).toList
+    val rs = Grapht.query(g, id, results, condition, prioritiser)
+      .map({
+        m => (m("dist").asInstanceOf[Long], m("path").asInstanceOf[String].split(",").map(_.toLong))
+      }).head
+
+    println(s"GftL: ${rs._1} in ${rs._2.length} hops: ${rs._2.mkString("->")}")
+    rs
   }
 
+  def grapht(from:Long, to:Long, p: Prefetcher)(implicit connection:Connection): (Long, Array[Long]) = {
+    // first get the lat/lng of the target node
+    val (targetLat, targetLong) = SQL("SELECT lat, lng FROM points WHERE id={id}")
+      .on("id"->to)
+      .apply()
+      .map(r => (r[Long]("lat"), r[Long]("lng"))).head
+
+    val g = new Graph(p)
+
+    val results = new Result(
+      edgeProps = Map[String, TAccumulator](
+        "length" -> new CountAccumulator(0),
+        "path" -> new ConcatAccumulator("id2", ",", id.toString()),
+        "dist" -> new SumAccumulator[Long]("dist", 0)
+      ),
+      vertexProps = Map[String, TAccumulator](
+        "start" -> new ConstAccumulator(from),
+        "end" -> new LastAccumulator("id", from)
+      ))
+
+    def prioritiser(edge:Edge, vertex:GraphNode, sofar: Result)(implicit connection:Connection): Double = {
+      val h = Timer.time("DB ll", {
+        SQL("SELECT latlongdist({lat}, {lng}, {gLat}, {gLng}) AS priority")
+          //      .on("lat" -> 1L, "lng"->1L)
+          .on("lat" -> vertex.properties("lat").asInstanceOf[Long], "lng"->vertex.properties("lng").asInstanceOf[Long], "gLat"->targetLat, "gLng"->targetLong)
+          .as(SqlParser.double("priority").single)
+      })
+      //      + edge.properties("dist").asInstanceOf[Long]
+      val g = sofar.get("dist").asInstanceOf[Long]
+
+      h + g
+    }
+
+
+    val condition =
+      new AndCondition(
+        new EqualityCondition[Long]("start", from, Constant()),
+        new EqualityCondition[Long]("end", to, Variable())
+        //        new LessThanOrEqualCondition[Int]("length", 3, Increasing(Some(1)))
+      )
+
+    val rs = Grapht.query(g, id, results, condition, prioritiser)
+      .map({
+        m => (m("dist").asInstanceOf[Long], m("path").asInstanceOf[String].split(",").map(_.toLong))
+      }).head
+
+    println(s"Gpht: ${rs._1} in ${rs._2.length} hops: ${rs._2.mkString("->")}")
+    rs
+  }
 }
+

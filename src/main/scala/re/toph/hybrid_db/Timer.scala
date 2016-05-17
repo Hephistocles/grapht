@@ -47,24 +47,38 @@ object Timer {
     val result = block    // call-by-name
     val t1 = System.nanoTime()
 
-    val diff = (t1 - t0)/1000000
+    val diff = t1 - t0
 
     root.addReading(diff)
     root = last
     result
   }
 
-  def printTree(timerResult: TimerResult, maxDepth:Int, depth:Int = 0):Unit = {
+  def timeString(time: Long) : String = {
 
-    printf("%-30s %6d tot %6d avg %6d\n", " "*(depth*2) + timerResult.name, timerResult.time, timerResult.time/timerResult.count, timerResult.count)
+    if (time < 10000000) {
+      val newTime = time/1000000.0
+      f"$newTime%6.2fms"
+    } else {
+      val newTime = time/1000000
+      f"$newTime%6dms"
+    }
+  }
+
+  def printTree(timerResult: TimerResult, maxDepth:Int, depth:Int = 0, parentCount:Int=1):Unit = {
+
+    println(f"${" "*(depth*2) + timerResult.name}%-30s"
+      + s"${timeString(timerResult.time)} tot ${timeString(timerResult.time/timerResult.count)} avg    "
+      + f"${timerResult.count}%6d tot ${timerResult.count/parentCount}%6d avg")
+
     if (depth>=maxDepth) return
 
     timerResult.subs.toList
       .sortBy({
-        case (_, tr) => tr.time
+        case (_, tr) => tr.time/tr.count
       })
       .foreach({
-        case (_, tr) => printTree(tr, maxDepth, depth+1)
+        case (_, tr) => printTree(tr, maxDepth, depth+1, timerResult.count * parentCount)
       })
 
 

@@ -11,35 +11,23 @@ import play.api.libs.ws.ning.NingWSClient
 import scala.collection.JavaConverters._
 import scala.concurrent.ExecutionContext
 
-/**
-  * Created by christoph on 12/05/16.
-  */
-trait BenchmarkTest {
-  val timeAll: (List[(String, ()=>List[Map[String,Any]])], Int) => Unit =
-    (l, iterations) => {
-      for (i <- 0 to iterations) {
-        l.foreach({
-          case (s, f) => Timer.time(s, f())
-        })
-      }
-    }
-}
+
 
 
 package object FriendOfFriend extends BenchmarkTest {
 
-  val (hops, id) = (3, 1)
+  val (hops, id) = (4, 1)
 
   def go()(implicit db: GraphDatabaseService, connection:Connection,connection2: Neo4jREST, wsclient:NingWSClient, ec:ExecutionContext): Unit = {
 
     //TODO: lookahead join doesn't work atm. Please try again later.
     val (lookaheads, blocks) = (
-      (3 to 5)
+      (4 to 4)
         .map(b => (s"Lookahead ($b)", new LookaheadMultiPrefetcher(b))),
       List(1, 10, 100, 1000, 5000, 10000, 20000)
         .map(b => (s"Block ($b)", new LookaheadBlockPrefetcher(b))))
 
-    val prefetchers = List() ++ lookaheads ++ blocks
+    val prefetchers = List() ++ lookaheads //++ blocks
 
     val tests = List(
       ("Neo", () => getHopDistsNeo(hops, id)),
@@ -50,7 +38,7 @@ package object FriendOfFriend extends BenchmarkTest {
       case (s, p) => (s"GRAPHT $s", () => getHopDists(hops, id, p))
     })
 
-    timeAll(tests.toList, 1)
+    timeAll(tests.toList, 5)
   }
 
   def getHopDistsNeo(hops:Int, n:Long)(implicit db: GraphDatabaseService):List[Map[String, Any]] = {
@@ -116,6 +104,14 @@ package object FriendOfFriend extends BenchmarkTest {
   def getHopDistsSQL(hops: Int, n: Long)(implicit connection: Connection): List[Map[String, Any]] = {
     SQL(
       """
+        |(SELECT A.id1 s, E.id2 e, 4 l, 'Something' p, A.dist + B.dist + C.dist + D.dist + E.dist dist FROM
+        | edges A
+        |   JOIN edges B ON A.id2=B.id1
+        |   JOIN edges C ON B.id2=C.id1
+        |   JOIN edges D ON C.id2=D.id1
+        |   JOIN edges E ON D.id2=E.id1
+        |   WHERE A.id1={id})
+        |UNION
         |(SELECT A.id1 s, D.id2 e, 4 l, 'Something' p, A.dist + B.dist + C.dist + D.dist dist FROM
         | edges A
         |   JOIN edges B ON A.id2=B.id1
@@ -207,7 +203,9 @@ package object FriendOfFriend extends BenchmarkTest {
         new LessThanOrEqualCondition[Int]("length", n, Increasing(Some(1)))
       )
 
-    Grapht.query(g, id, results, condition).toList
+    val prioritiser = (_:Edge,_:GraphNode,_:Result) => 0.0
+
+    Grapht.query(g, id, results, condition, prioritiser).toList
   }
 
 }
