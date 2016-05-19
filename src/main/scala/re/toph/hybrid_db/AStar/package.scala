@@ -61,14 +61,14 @@ package object AStar extends BenchmarkTest {
     val prefetchers = lookaheads // ++
 
     val (from, to) = (1, 50)
-    val tests = List(
+    val tests = /* List(
       ("East to West Neo", () => neo2()),
       ("East to West No Search", () => neo(58197, 4362)),
         ("Neo", () => neo(from, to)),
         ("PSQL", () => psql(from, to))
 //      ("SQL", () => unionSQL(hops, id)),
 //      ("SQL CTE", () => CTESQL(hops, id))
-    ) ++ prefetchers.flatMap({
+    ) ++ */ prefetchers.flatMap({
       case (s, p) =>
         List(
 //          (s"Grapht $s", () => grapht(from, to, p)),
@@ -229,10 +229,10 @@ package object AStar extends BenchmarkTest {
     PATHS OVER myGraph
     WHERE START = {from}
     AND END = {to}
-    TRAVERSE UNIQUE VERTICES BY MIN (ACC EDGES SUM dist) + latlongdist(VERTEX(lat), VERTEX(lng), myLat, myLng)
+    TRAVERSE UNIQUE VERTICES BY MIN cost + latlongdist(VERTEX(lat), VERTEX(lng), myLat, myLng)
     LIMIT 1;
-
   */
+
   def graphtLocal(from:Long, to:Long, p: Prefetcher)(implicit connection:Connection): (Long, Array[Long]) = {
     // first get the lat/lng of the target node
     val (targetLat, targetLong) = SQL("SELECT lat, lng FROM points WHERE id={id}")
@@ -319,7 +319,7 @@ package object AStar extends BenchmarkTest {
         //        new LessThanOrEqualCondition[Int]("length", 3, Increasing(Some(1)))
       )
 
-    val rs = Grapht.query(g, id, results, condition, prioritiser)
+    val rs = Grapht.query(g, id, results, condition, prioritiser, 1)
       .map({
         m => (m("dist").asInstanceOf[Long], m("path").asInstanceOf[String].split(",").map(_.toLong))
       }).head

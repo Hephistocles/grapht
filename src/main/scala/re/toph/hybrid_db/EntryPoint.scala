@@ -43,20 +43,20 @@ object EntryPoint {
       // uncomment this to load data into neo4j
 //      Neo4JLoader.injectdata("points.co", "roads.gr")
 
-      separator("Closest Points")
-      ClosestPointsPath.go()
-      Timer.printResults(depth=2)
-      Timer.clearTimes()
+//      separator("Closest Points")
+//      ClosestPointsPath.go()
+//      Timer.printResults(depth=2)
+//      Timer.clearTimes()
 
 //      separator("friend of friend search")
 //      FriendOfFriend.go()
 //      Timer.printResults(depth=2)
 //      Timer.clearTimes()
 
-//      separator("A* Search")
-//      AStar.go()
-//      Timer.printResults(depth=2)
-//      Timer.clearTimes()
+      separator("A* Search")
+      AStar.go()
+      Timer.printResults(depth=2)
+      Timer.clearTimes()
     } catch {
       case e: Throwable => e.printStackTrace()
     } finally {

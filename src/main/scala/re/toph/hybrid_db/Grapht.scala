@@ -11,57 +11,54 @@ import scala.collection.mutable.ListBuffer
   */
 object Grapht {
 
-  case class PartialPath(id: Long, sofar: Result, priority: Double)
+  case class PartialPath(lastVertex : GraphNode, sofar: Result, priority: Double)
 
-  def query(g: Graph, _id: Long, _sofar: Result, condition: CompletionCondition, prioritiser: (Edge, GraphNode, Result) => Double)(implicit connection:Connection): ListBuffer[Map[String, Any]] = {
+  def query(g: Graph, _id: Long, _sofar: Result, condition: CompletionCondition, prioritiser: (Edge, GraphNode, Result) => Double, limit :Int = 1)(implicit connection:Connection): ListBuffer[Map[String, Any]] = {
 
-    val limit = 1
+    // TODO: I don't think this handles uniqueness at all
+
+    // create data structures
     val open = new util.HashMap[Long, PartialPath]()
-    val closed = new util.HashMap[Long, PartialPath]()
-
-//    val queue = new NodeQueue[PartialPath]()
+    val closedVertices = new util.HashMap[Long, PartialPath]()
     val queue = new PriorityQueue[PartialPath](new Comparator[PartialPath](){
       override def compare(o1: PartialPath, o2: PartialPath): Int = o1.priority.compareTo(o2.priority)
     })
+    val pathResults = ListBuffer[Map[String, Any]]()
 
-    val init = PartialPath(_id, _sofar, 0)
+    // initialise start vertex
+    val startVertex = g.getVertex(_id)
+    val initResult = _sofar.mapVertex((acc) => acc.acc(startVertex.properties))
+    val init = PartialPath(startVertex, initResult, 0)
     queue.add(init)
     open.put(_id, init)
 
-
-    val pathResults = ListBuffer[Map[String, Any]]()
-
     while (!queue.isEmpty()) {
-//      val part = queue.get()
+
       val part = queue.poll()
-      val id = part.id
+      val vertex = part.lastVertex
       val sofar = part.sofar
-//      println(s"    Looking at $id")
+      closedVertices.put(vertex.id, part)
 
-      val vertex = g.getVertex(id)
-      closed.put(id, part)
+      if (condition.check(sofar)) {
+        pathResults += sofar.result
 
-      // calculate a new intermediate result, taking into account this vertex's properties
-      val vertexResult = sofar.mapVertex((acc) => acc.acc(vertex.properties))
-
-      if (condition.check(vertexResult)) {
-        pathResults += vertexResult.result
+        // check we haven't overstepped our limits
+        if (pathResults.length >= limit)
+          return pathResults
       }
 
-      // check we haven't overstepped our limits
-      if (pathResults.length >= limit)
-        return pathResults
-
       // Only consider neighbours if it could be beneficial
-      if (condition.nextSatisfiable(vertexResult)) {
+      if (condition.nextSatisfiable(sofar)) {
 
         // Otherwise let's look at neighbours
         vertex.edges.foreach(e => {
-          val edgeResult = vertexResult.mapEdges(a => a.acc(e.properties))
+          val edgeResult = sofar.mapEdges(a => a.acc(e.properties))
 
           // NB: this could hurt if we don't actually need the vertex!
-          val priority = prioritiser(e, g.getVertex(e.to), edgeResult)
-          val newPath = PartialPath(e.to, edgeResult, priority)
+          val toVertex = g.getVertex(e.to)
+          val priority = prioritiser(e, toVertex, edgeResult)
+          val endPointResult = edgeResult.mapVertex(a => a.acc(toVertex.properties))
+          val newPath = PartialPath(toVertex, endPointResult, priority)
 
           if (open.containsKey(e.to)) {
             if (open.get(e.to).priority > priority) {
@@ -73,8 +70,8 @@ object Grapht {
             }
           // have we visited this node before?
           //   IF we have, only re-examine if the cost this time is lower than last time
-          } else if (closed.containsKey(e.to)) {
-            if (closed.get(e.to).priority > priority) {
+          } else if (closedVertices.containsKey(e.to)) {
+            if (closedVertices.get(e.to).priority > priority) {
               open.put(e.to, newPath)
               queue.add(newPath)
             }
