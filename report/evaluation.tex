@@ -1,0 +1,68 @@
+
+\section{Test Framework}
+%TODO: Talk about methodology, equipment and data store in each case
+
+\section{Prefetcher Performance}
+
+In the following subsections, tests were performed to
+evaluate different prefetching strategies. In all cases, data was collected
+about the prefetcher while responding to an A* traversal across a DIMACS
+dataset representing the US road network\cite{dimacs}. For repeatability, six
+queries were fixed and used for every prefetcher. A more thorough description
+of the benchmarking environment can be found in Chapter~\ref{ch:evaluation}.
+
+% Results 1 (1GB):
+%   Grapht Local Lookahead (50)   5775ms tot   1925ms avg         3 tot      3 avg
+%     DB                          2583ms tot   4.22ms avg       612 tot    204 avg
+%   Grapht Local CTE Lookahead (3)  6317ms tot   2105ms avg         3 tot      3 avg
+%     DB                          3882ms tot   1.00ms avg      3894 tot   1298 avg
+%   Grapht Local CTE Lookahead (2)  8045ms tot   2681ms avg         3 tot      3 avg
+%     DB                          6098ms tot   0.85ms avg      7206 tot   2402 avg
+%   Grapht Local CTE Lookahead (4)  8588ms tot   2862ms avg         3 tot      3 avg
+%     DB                          3833ms tot   1.56ms avg      2454 tot    818 avg
+%   Grapht Local Lookahead (45)   8698ms tot   2899ms avg         3 tot      3 avg
+%     DB                          4115ms tot   4.26ms avg       966 tot    322 avg
+%   Grapht Local CTE Lookahead (5) 14055ms tot   4685ms avg         3 tot      3 avg
+%     DB                          4026ms tot   2.47ms avg      1632 tot    544 avg
+%   Grapht Local CTE Lookahead (1) 14662ms tot   4887ms avg         3 tot      3 avg
+%     DB                         11873ms tot   0.77ms avg     15507 tot   5169 avg
+%   Grapht Local Block (20000)   16620ms tot   5540ms avg         3 tot      3 avg
+%     DB                          9588ms tot     76ms avg       126 tot     42 avg
+%   Grapht Local Block (30000)   20382ms tot   6794ms avg         3 tot      3 avg
+%     DB                          5379ms tot     85ms avg        63 tot     21 avg
+%   Grapht Local Block (50000)   58590ms tot  19530ms avg         3 tot      3 avg
+%     DB                          2952ms tot    123ms avg        24 tot      8 avg
+
+% Results 2 (256MB):
+%   Grapht Local Lookahead (50)   3681ms tot   1840ms avg         2 tot      2 avg
+%     DB                          1524ms tot   3.74ms avg       408 tot    204 avg
+%   Grapht Local Lookahead (40)   4014ms tot   2007ms avg         2 tot      2 avg
+%     DB                          1901ms tot   3.31ms avg       574 tot    287 avg
+%   Grapht Local CTE Lookahead (3)  4213ms tot   2106ms avg         2 tot      2 avg
+%     DB                          2426ms tot   0.93ms avg      2596 tot   1298 avg
+%   Grapht Local CTE Lookahead (2)  4347ms tot   2173ms avg         2 tot      2 avg
+%     DB                          3024ms tot   0.63ms avg      4804 tot   2402 avg
+%   Grapht Local Lookahead (45)   4440ms tot   2220ms avg         2 tot      2 avg
+%     DB                          2140ms tot   3.32ms avg       644 tot    322 avg
+%   Grapht Local Lookahead (35)   4812ms tot   2406ms avg         2 tot      2 avg
+%     DB                          2551ms tot   3.22ms avg       792 tot    396 avg
+%   Grapht Local Lookahead (30)   5800ms tot   2900ms avg         2 tot      2 avg
+%     DB                          3010ms tot   3.24ms avg       930 tot    465 avg
+%   Grapht Local CTE Lookahead (4)  6457ms tot   3228ms avg         2 tot      2 avg
+%     DB                          2590ms tot   1.58ms avg      1636 tot    818 avg
+%   Grapht Local CTE Lookahead (1)  6834ms tot   3417ms avg         2 tot      2 avg
+%     DB                          5442ms tot   0.53ms avg     10338 tot   5169 avg
+%   Grapht Local CTE Lookahead (5) 11452ms tot   5726ms avg         2 tot      2 avg
+%     DB                          2874ms tot   2.64ms avg      1088 tot    544 avg
+%   Grapht Local Block (20000)   13245ms tot   6622ms avg         2 tot      2 avg
+%     DB                          6133ms tot     73ms avg        84 tot     42 avg
+%   Grapht Local Block (10000)   24652ms tot  12326ms avg         2 tot      2 avg
+%     DB                         22302ms tot     79ms avg       280 tot    140 avg
+
+\section{Performance of Graph-Centric Queries}
+\section{Performance of Row-Centric Queries}
+\section{Performance of Hybrid Queries}
+\section{Expressiveness of Query System}
+
+Joins between graph and relational components go here, rather than under performance of hybrid queries, I think.
+

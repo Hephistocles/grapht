@@ -1,0 +1,567 @@
+
+In aiming to produce a hybrid system somehow equally well suited to both
+classes of problem, two approaches are possible. The first would be to create a
+novel system from scratch which fully commits to neither underlying storage
+strategy; following instead some middle path to achieve optimality. A second
+strategy -- and the one employed here in the design of Grapht -- is to extend
+the capabilities of one system to mitigate its weaknesses by taking inspiration
+from the other system. In particular, Grapht extends a durable relational data
+store with a graph-centric prefetched cache.
+
+In this chapter, I first give a brief introduction to the different components
+involved in resolving a query through Grapht. Following that, I describe the
+two main components in more detail: the cache prefetcher and the query
+processor.
+
+
+
+
+
+
+\section{System Overview}
+
+As mentioned earlier, Grapht extends a relational data store -- a graph query
+layer is ``grafted'' onto the underlying store.  It is itself made up of two
+parts: a row-centric and a graph-centric handler. Both components communicate
+directly (and separately) with the underlying store via standard SQL queries.
+This allows any SQL-compatible data-store to be used fairly indiscriminately.
+In addition to this, Grapht also includes a query processor, allowing simple
+queries to be expressed in a syntax similar to SQL, but harnessing the
+additional power of the graph-centric handler. Graph algorithms and queries
+vary widely, such that it would be impossible to efficiently represent the
+full diversity using a single query language. For this reason, the query
+processor is designed the be used  as a possible alternative to using the
+Grapht API directly. (TODO: Diagram of main components)
+
+%TODO: Diagram: (see paper somewhere on desk)
+
+The Grapht API has a relatively small interface. Method invocations to the API
+are mostly handled exclusively by one of the row-centric handler or the graph-centric
+handler, allowing each to be highly optimised for the task at hand. A few
+higher-level methods then allow client applications to combine the results of
+graph and row-centric queries.  The row-centric handler performs relatively
+little work, relying instead on decades of optimisation made in relational
+databases to efficiently retrieve data by passing queries directly on to the
+underlying store.
+
+Within the graph handler, data is laid out in memory to optimise graph-centric
+access patterns. The handler contains a cache, by design of limited size, so
+that Grapht can be used on systems even with small amounts of memory
+available. When a vertex is requested through the API which is not available
+in the cache, the vertex data is obtained from the relational database. At the
+same time, a prefetcher is used to populate the cache with adjacent vertices,
+so that subsequent requests from the query processor can hope to be fulfilled
+directly from the cache.
+
+Finally, the query processor receives string queries from a client application
+and breaks them apart into row-centric subqueries targeting the relational
+database directly, and graph-centric subqueries targeting the graph handler.
+Client queries are written using an extension of SQL I call \textit{gSQL} (as
+in \textit{graph}-SQL) inspired by Biskup et al\cite{gSQL}. The extension is a
+strict superset of SQL, allowing pure-SQL queries to be passed on directly to
+the underlying store. Pure-graph queries end up being handled exclusively by
+the graph handler, and hybrid queries are broken apart and dispatched
+appropriately.
+
+
+
+
+
+
+\section{Row Handler}
+
+As mentioned above, the row-centric handler performs relatively little work.
+Instead, queries are passed unchanged to the underlying store, and the
+resulting relations are passed on. One optimisiation is that queries to the
+row-handler are  lazily evaluated by default. This allows queries to be
+transformed or dropped altogether when doing so would be advantageous. One
+situation in which this may arise is as part of a more complex API method
+call. The method may need to join together results from a graph query and a
+row-centric query. If the graph query returns an empty result set, the  row
+query does not need to be evaluated - the joined result will itself be empty.
+
+
+
+
+
+
+\section{Graph Handler}
+
+The graph-centric handler is slightly more involved than the row-handler in
+that it contains a cache, in which vertices are looked up before resorting the
+the underlying store. Internally, it maintains an indexed list of vertices in
+memory. Each of these vertices contains a list of edges, allowing for quick
+traversal without needing to pass through an index again. If the full graph
+could be loaded into memory, these edges would contain a pointer to the
+target vertex directly to avoid indirection through an index in the same way.
+In practice however, we do not expect to be able to always be able to contain
+the entire graph in memory, and instead the edges contain an index to the
+target vertex, which may not yet be loaded into the cache.
+
+When a vertex is requested through the Grapht API, the cache index is first
+checked to try to fulfill the request. If possible, the vertex is returned
+directly. If this is not possible, the graph handler queries the underlying
+data store to obtain the vertex data. At the same time, a prefetcher is used
+to obtain data for related edges and vertices. The requested vertex data is
+immediately returned to the query processor, and the prefetched related data
+is added to a work queue. This work queue is processed in a separate
+background process which is responsible for adding new items to the cache, and
+removing them when the cache exceeds the memory allowed by the current Java
+virtual machine (JVM). When the size of the cache does exceed the allowed
+size, vertices are removed from the index according to a least-recently used
+strategy. That is to say, each time a vertex is requested, the access is
+logged, when a vertex must be eliminated from the index,  the vertex with the
+least recent access time is chosen. The idea behind this is that vertices
+which have  been recently visited by the query processor are likely to be
+visited again soon in the future, since the traversal of the graph will remain
+local to the most recent nodes. Thus these vertices should be kept in the
+cache, in preference to vertices which were only visited a long time ago.
+
+The performance of two different strategies (\textit{lookahead} and
+\textit{block}) for prefetching was analysed in detail by Yoneki et
+al.~\cite{crackle}, but I have here replicated and extended these results with
+a third strategy. 
+
+\subsection{Lookahead Prefetcher}
+
+The first strategy examined by Yoneki simply performed a limited depth-first
+traversal of the graph, starting from the requested node. This traversal was
+performed using a recursive ``Common Table Expression'' (CTE). These types of
+query allow a result set to be built up by recursively joining a partial
+result set with another relation. As the lookahead depth increases, the size
+of the partial result set grows exponentially, such that the cost of joining
+becomes itself exponentially larger. For this reason, Yoneki identified that
+after a certain depth, the cost of the prefetch procedure grows larger than
+the avoided overhead. I replicated this finding, which is further discussed in
+Chapter~\ref{ch:evaluation}.
+
+
+
+\subsection{Block Prefetcher}
+
+The second strategy used by Yoneki et al. exploited the fact that there is
+often a strong correlation between vertex properties and graph locality. For
+example, in a road network, the latitude and longitude of junctions can be
+expected to correlate with graph locality, since nearby junctions are far more
+likely to be connected by a road than distant ones. Yoneki terms this
+``semantic'' locality, and uses it to quickly prefetch large blocks of the
+graph by simply filtering on latitude and longitude. The cost of this
+procedure does not grow as fast as for the lookahead prefetcher - for a block
+of size $b$,  we would expect the cost of fetching all junctions within the
+block to be proportional to the number of junctions within the block -- i.e.
+the cost will be $O(b^2)$. Although this is advantageous from a performance
+perspective, it places an important limitation on the data -- namely that
+there must exist some property which is tightly correlated with graph
+locality.
+
+
+
+\subsection{Iterative Lookahead Prefetcher}
+
+I examined a third possible strategy for this report, inspired by the first
+two.  The lookahead prefetcher is most portable, since it can be
+indiscriminately applied to any graph. However, it does not scale as well,
+such that when the cache is large, and it would be advantageous to prefetch
+many vertices in one go, the performance cost is too high, and a block
+prefetcher becomes more effective. The source of this cost penalty is that
+many edges are unnecessarily traversed repeatedly. For example, after one
+level of recursion, edges one hop away from the source are traversed, and
+their destinations included within the CTE table. After five levels of
+recursion, we should only be examining edges which are precisely five hops
+away from the source. However the recursive CTE does not distinguish between
+the edges which were added at the previous  level of recursion and those which
+were added at the start of the procedure (and which do not need re-
+examination).
+
+We can improve performance, then, by only expanding the fringes of the search
+-- and even then only those fringes which have not been previously examined.
+To achieve this, I implemented a slightly more involved prefetcher, which
+maintains for each request a set of vertices explored this time. It then performs
+a number of iterations -- one for each level of lookahead -- requesting just those 
+vertices which were added to the fringe during the previous iteration. Requests
+look like this: 
+
+\begin{verbatim}
+SELECT *
+FROM edges
+JOIN vertices
+   ON vertices.id = edges.from_id
+WHERE edges.from_id IN (1286, 1373, 1141, ...)
+\end{verbatim}
+
+These operations are very fast, since the \texttt{from\_id} field of the edge
+relation is indexed such that retrieval is a constant time operation. This
+type of indexing is not possible for the recursive CTE table. The trade-off
+here is that many requests are made from the data store, such that the
+communication and query-parsing latency are incurred repeatedly. However, as
+is discussed in Chapter~\ref{ch:evaluation}, experiments showed that in
+practice this latency was still smaller than the join cost of the CTE for
+large lookahead depths, and in fact this iterative lookahead approach allowed
+lookaheads of almost ten times the optimal depth of the original lookahead
+prefetcher without any  significant loss of performance. Additionally, A*
+search algorithms ran faster when using the iterative lookahead prefetcher,
+presumably because the prefetcher offered guaranteed graph locality, where the
+block prefetcher could only  base decisions on a presumed correlation.
+
+As a result of these findings, the iterative lookahead prefetcher was used as
+the default Grapht prefetcher. An optimal prefetch depth was not so clearly
+identifiable, and it is likely that this optimality will vary based on factors
+such as cache and graph size as well as the degree of interconnectedness of
+the graph (since a graph with many high-degree vertices will have a faster-
+growing fringe during exploration).
+
+
+
+
+
+
+\section{Grapht API}
+
+The Grapht API allows client applications to query the underlying data store,
+while  taking advantage of the row and graph-centric handlers to optimise
+performance according to the expected access patterns. There is one API method
+targeting the row-centric handler directly: \texttt{getRelation(sql)}. This
+method takes a string parameter \texttt{sql} representing a standard SQL
+query, and returns an iterable list of rows representing the result relation.
+In order to target the graph-centric query, one must first initialise the
+graph cache with a particular source. This is done by using the
+\texttt{createGraph(vertices, vertexKey, edges, sourceKey, targetKey)} method, which
+takes four string arguments. The arguments \texttt{vertices} and
+\texttt{edges} correspond to SQL queries representing the edge and vertex
+relations respectively. Normally, these strings will simply be the names of
+the tables corresponding to edges and vertices in the underlying store, but it
+is also possible to pass in a SQL query which will dynamically create an
+edgelist. The remaining arguments, \texttt{vertexKey}, \texttt{sourceKey} and
+\texttt{targetKey} are used to determine which fields of the chosen relations
+correspond to  vertex, edge source and edge target identifiers respectively.
+
+Once the graph is initialised, two simple methods target the graph-centric
+handler directly, retrieving the relevant entities from the graph according to
+a given ID: \texttt{getVertex(id), getEdge(id)}. The objects returned by these
+method calls have accessor methods of their own. Vertex objects have access to
+the \texttt{getEdgeList} method to obtain a list of outgoing edges, and Edge
+objects have access to a \texttt{getTargetVertex} method to obtain a reference
+to the vertex this edge leads to. As mentioned earlier, vertices are not
+guaranteed to be present in the graph cache when they are requested, as they
+may have been displaced by the LRU policy. A request to an absent vertex will
+trigger a fetch from the underlying store. On the other hand, edges will
+always be present cache as long as their source vertex is. Finally, both Edge
+and Vertex objects share a \texttt{getAttribute} method, used for retrieving
+arbitrary data stored alongside the edge. Between these five methods, it is
+possible to traverse the entire graph efficiently, starting and ending at any
+arbitrary vertex, and collecting any desired data along the way.
+
+Almost any algorithm can be efficiently expressed using this interface for
+graph traversal and retrieval of data. For convenience, a few further methods
+are provided, which use the methods described above for themselves. The most
+powerful of these is the \texttt{getPaths} method, which is used to discover
+paths branching out from some source vertex. The design of this method is
+closely tied to the design of the query processor (discussed in the next
+section), since this method provides the bulk of the implementation for the
+query processor. However, a client application can also call \texttt{getPaths}
+independently.
+
+The operation of \texttt{getPaths} essentially follows a best-first
+exploration of the graph starting from the source vertex. To achieve this, a
+simple priority queue of partially-discovered paths is used, where the
+priority for new vertices is zero by default (in which case the priority queue
+devolves into a normal first-in, first-out queue and the search proceeds as a
+breadth-first search). The priority of a vertex is otherwise determined by a
+user-provided \textit{prioritiser} function.
+
+Rather than provide a list of edges and vertices as output, a collection of
+\textit{accumulators} are provided to \texttt{getPaths}. These are in effect
+stateful functions, which  will receive new data at each step of traversal,
+and update their internal state accordingly. For example, a \texttt{count}
+accumulator could be provided, which simply increments its state with each new
+vertex encountered. Alternatively, a \texttt{sum} accumulator could be
+provided which will extract some property from the edges traversed, and add
+the values together.
+
+Along with these accumulators, \textit{evaluator} functions can be provided,
+which determine whether the state of the accumulator is such that the current
+path should be saved for inclusion in the result set. This allows us to, for
+example, limit traversal to a certain depth by using a \texttt{count}
+accumulator in conjunction with an appropriate evaluator. An opportunity to
+cut the search space down is also provided to the user, who can optionally
+specify  a direction or rate of change for each accumulator. For example, a
+\texttt{count} accumulator is guaranteed to increase by one with each step
+through the graph, while a \texttt{sum} accumulator can be assumed to at least
+increase each step if the property it is accumulating is always positive. If
+an evaluator is provided which rejects values greater than some given
+constant, then we do not need to continue expanding paths once that constant
+has been reached with the \texttt{sum} accumulator. 
+
+Two boolean values may also be provided, specifying that only unique edges or
+vertices be used along the path. This is determined by maintaining a
+``closed'' set of already- visited entities for each path. If a vertex or edge
+which is already in a closed set is expanded, it is skipped rather than being
+added to the queue as a new partial path.  Finally, a \textit{limit} parameter
+is used to determine how many valid paths should be retrieved before
+returning. By default, the limit is unset, and the search for valid paths will
+be exhaustive.
+
+To summarise, then, \texttt{getPaths} receives as mandatory input a graph and
+start vertex, and the following optional parameters:
+
+\begin{itemize}
+    \item A \textit{prioritiser} function to guide traversal
+    \item A list of vertex \textit{accumulators} (optionally with a rate of change specified)
+    \item A list of edge \textit{accumulators} (optionally with a rate of change specified)
+    \item A list of \textit{evaluators} to determine valid paths
+    \item Two boolean values specifying whether vertices and edges must be unique along a path
+    \item An integer \textit{limit} on the number of paths retrieved
+\end{itemize}
+
+
+In the special case where a single path is requested, an important
+optimisation is possible. When multiple partial paths pass through the same
+vertex, we need only consider the route with the highest priority. In highly
+interconnected graphs, this allows us to discard a large number of possible
+paths early on. In practice by doing this, and requesting only unique
+vertices, this  optimisation allows the best-first traversal to degenerate
+into a variation on the A* search algorithm, as long as an admissible
+heuristic is used in the prioritiser function to guide traversal.
+
+On each iteration of the traversal, a partial path is fetched from the
+priority queue. This path is considered to see if it satisfies the conditions
+required to be output. If it does, the path is saved, and we check whether the
+desired number of paths have been found, stopping execution if this is the
+case. If not, we consider all possible extensions of this path by iterating
+through the outgoing edges of the final vertex in the path. If it is possible
+that these edges may lead to a valid solution (which can be determined by
+examining the attributes' rates of change, as discussed earlier), then the
+target vertices are fetched from the cache. A new partial path is created,
+accumulating attributes from both the edge and the target vertex. A priority
+is calculated for this path according to the prioritiser function,  and the
+new path is added to the queue, ready for selection in some future iteration.
+
+The eventual output of \texttt{getPaths} is a list, where each entry contains
+the accumulated results of traversing a valid path from the source vertex. In
+effect, this result can be treated as a relational table, where each
+accumulator is a field in the relation. This allows paths through the graph to
+be manipulated just like any relation in the underlying store, and in
+particular allows the results of a path-finding query to be joined with a
+normal relation. This ability is a significant contribution of my work, since
+obtaining this kind of result efficiently is not possible in either a purely
+relational system (where  the path-finding component would take too long), nor
+in a purely graph-oriented  system (where there exists no notion of a normal
+relation).  % TODO: explain better why graph solutions are not good enough
+Ideally, the result relation of the \texttt{getPaths} method would be created
+directly within the underlying store, so that joins could literally be
+performed as between normal relations. The current Grapht prototype is not
+tightly coupled enough to the underlying store for this to be possible,
+however. As a workaround in the meantime, the results of the \texttt{getPaths}
+method can be loaded into the store after they are calculated as a temporary
+in-memory relation. This does carry an inevitable performance  penalty
+compared to being constructed directly in PostgreSQL's memory space. The
+precise impact of this prototype limitation is discussed further in
+Chapter~\ref{ch:evaluation}.
+
+
+It may seem as though only providing a path-searching method does not provide
+a  very powerful abstraction beyond the vertex and edge-querying methods
+provided.  However, the aggregation mechanism means that we are able to
+discard path information if it is not of interest, and instead only consider
+data belonging to nodes in some  way reachable from the source node. For
+example,  we may wish to retrieve a list of all junctions reachable within
+100km of some given source junction. This can be achieved by using a
+\texttt{sum} accumulator as described above and a \texttt{last} accumulator,
+which simply retrieves  a certain property from the last vertex along a path.
+An evaluator can then be attached to the \texttt{sum} accumulator, checking
+whether the path to reach this vertex is less than 100km. Since the sum will
+be non-decreasing,  an exhaustive search will terminate as paths cease to be
+explored when 100km are passed. In this way, we can quickly retrieve a relation
+containing just the details of nearby junctions using a single API method call.
+
+
+
+
+
+
+\section{Query Processor}
+
+The aim of the query processor is to provide some of the power of the Grapht
+API in a more lightweight manner, so that clients can simply express retrieval
+queries as strings, rather than needing to interact with a more low-level API.
+Biskup's Graph Manipulation Kernel\cite{gSQL} (GMK) unites relational and
+graph models in a way similar to what we would like to achieve. It does this
+by defining paths over graphs as relations with three implicit attributes:
+\texttt{START}, \texttt{GOAL} and \texttt{LENGTH}.  By describing paths in
+this way, we write queries over the possible search space of all paths through
+the graph using a syntax very similar to SQL. For example, a ``friend-of-
+friend''-style query  to find vertices two hops away from some the vertex with
+ID 1 would be written in Biskup's graph manipulation kernel:
+
+\begin{verbatim}
+SELECT *
+    FROM PATHS OVER my_edge_relation
+WHERE 
+    START = 1 AND 
+    LENGTH = 2 
+\end{verbatim}
+
+In this example, \texttt{my\_edge\_relation} is some relation with precisely two
+attributes which are interpreted as start and end identifiers of edges in a
+graph. If the relation contains more than two attributes, the attributes
+indicating start and end may be included in parentheses, as in ``\texttt{...
+PATHS OVER my\_edge\_relation (id1, id2)}.'' Other properties of the edge
+relation can then be aggregated along the path to provide new data to be
+included in the output path relation.  Although this provides a good starting
+point for Grapht, a few notable shortcomings prevent us from adopting the
+solution directly.
+
+Firstly, Biskup's solution has no direct support for vertex attributes.
+Vertices are in fact not treated as first-class entities at all, simply being
+included implicitly as start and end properties within the edge relation. It
+is possible to include vertex properties in a query by joining the edge
+relation together with the vertex relation, however this results in
+duplication of vertex data when several edges lead to the same vertex, and can
+cause confusing ``off-by-one'' errors since any path will have one more vertex
+than it has edges.
+
+Secondly, Biskup's extension leaves the traversal mechanism used to find valid
+paths unspecified. In many ways this is a good thing, and mimics the design of
+SQL itself. By ensuring that the  query is fully declarative, an
+implementation can select any method to find possible paths, and the client
+application need not worry about efficiently finding solutions. In the absence
+of cycles in the graph, the set of paths discovered will be constant, although
+they may be discovered in a different order. This is no different to the way
+in which the order of rows retrieved by a SQL query is undefined unless an
+\texttt{ORDER BY} clause is present in the query. The difference is that the
+performance gain from using an appropriate traversal order through the graph
+is much more significant than the gains made by iterating through a set of
+rows in a different order. If we want to find a particular neighbour of a
+vertex, a depth-first search (DFS) may visit every single other node in the
+graph before returning, while a breadth-first search (BFS) can terminate
+almost immediately. 
+
+Adding cycles to the graph makes appropriate selection of a traversal order
+all the more critical, since DFS here may result in non-termination, while
+BFS may have no problems. A final related problem with GMK is that it is
+difficult to express uniqueness constraints on the vertices visited. By
+enforcing that the vertices visited along a path be unique, it becomes
+possible to traverse a graph with cycles without non-termination, so
+expressing these constraints is very valuable.
+
+
+
+\subsection{Improving on the Graph Manipulation Kernel}
+
+To solve the issue of vertex attributes, two small changes must be made.
+Firstly, defining a graph according to an edge relation is no longer
+sufficient,  and graphs must now be specified as a pair consisting of an edge
+relation and a vertex relation. As before, we must specify the attributes to
+use as start and end points for the edge relation, or vertex identifier for
+the vertex relation. We must also now change the syntax of calculated
+attributes of the output relation, to explicitly state whether values are
+being accumulated along the edges of the path, or along the vertices. For
+example, to accumulate the \texttt{name} property of vertices as a
+concatenated string, along with the total \texttt{cost} of edges along the
+path, a gSQL query may look like this:
+
+\begin{verbatim}
+SELECT START, END, LENGTH, 
+    (ACC VERTICES CONCAT(name, " -> ")) path,
+    (ACC EDGES SUM(0, cost)) cost 
+FROM PATHS OVER (my_edge_relation(id1, id2), my_vertex_relation(id))
+WHERE 
+    START = 1
+\end{verbatim}
+
+In this way, the accumulation is made explicitly over vertices or edges
+(\texttt{ACC VERTICES} in the former case, \texttt{ACC EDGES} in the latter).
+Following this declaration of accumulation is a function which will be used as
+an accumulator (\texttt{CONCAT} or \texttt{SUM} in the example). For the
+prototype version of Grapht, only a few functions were defined but others
+would be trivial to add. The \texttt{CONCAT} function, for example, takes as
+arguments the name of a property to accumulate at each step and a separator
+string, returning the concatenated value of all named properties along the
+path.
+
+To solve the remaining problems, I have added a \texttt{TRAVERSE} clause to
+the end of the query format, which allows users to specify a prioritisation
+order for traversing new nodes in search of a valid path. The clause is
+optional, and if omitted a breadth-first search is used. An example use of this
+clause would be:
+
+\begin{verbatim}
+SELECT * 
+FROM PATHS OVER (my_edge_relation(id1, id2), my_vertex_relation(id))
+WHERE 
+    START = 1
+TRAVERSE 
+    UNIQUE VERTICES 
+    BY MIN(length)
+\end{verbatim}
+
+This example specifies a breadth-first traversal, avoiding cycles by
+disallowing repeated vertices along the same path. The \texttt{UNIQUE}
+modifier is again optional, and may specify either ``\texttt{VERTICES}'',
+``\texttt{EDGES}'' or ``\texttt{VERTICES,EDGES}'' if duplicate edges and
+vertices should both be avoided. \texttt{length} is a default property of all
+paths, and so at each opportunity to discover a new vertex, Grapht will
+select one according to the minimum path length so far (i.e. according to a
+breadth-first traversal).
+
+One limitation has been introduced to gSQL queries which was not present in
+GMK. This is that queries should always specify a start vertex for the search.
+This is included for performance reasons, following the implementation of the
+\texttt{getPaths} method of the Grapht API.  In general it would be
+inefficient to consider every possible path through the graph when the query
+can be solved using a local traversal. It would be possible to reduce the
+search space without using a known start vertex (for example by working
+backwards from a known end node) but these strategies have not been
+implemented for this initial prototype, hence a start node must always be
+provided.
+
+
+
+
+\subsection{Executing gSQL}
+
+The main task of the query processor is to extract information from a gSQL
+query in order to call the \texttt{getPaths} method of the API. When a gSQL
+query is received, the first task is to separate components of the query into
+row-centric and graph-centric queries. To achieve this, the source of data
+specified in the query is looked at. If data is being queried from one of the
+relational tables, then that data is fetched through the row handler directly.
+If data is being queried from a ``\texttt{PATHS OVER}'' clause, then the query
+will instead be resolved through the graph handler. This provides a very
+simple way to break apart a complex query and reliably identify what kind of
+access pattern should be optimised for.
+
+In the case of complex clauses which  join together results from disparate
+data sources, a relational join can be performed as between normal relational
+tables. This is possible since the result of a ``\texttt{PATHS OVER}'' query
+(i.e. the output of a call to \texttt{getPaths}) When a query has been
+identified as targeting the graph handler, it is further broken down into
+actionable components. First, the data source is identified from the
+\texttt{PATHS OVER} clause. If the precise combination of edge and data
+relations has not been seen before, a new subgraph is initialised in the cache
+to represent it. Next, accumulator functions are generated to collect the data
+required by the \texttt{SELECT} clause. Any accumulators specified in the
+query are created according to the parameters passed in the query. In addition
+to these, three accumulators are always created to represent the
+\texttt{START}, \texttt{LENGTH} and \texttt{END} attributes of the output
+relation. Finally, accumulators may also be  defined within the \texttt{WHERE}
+clause, so that conditions can be checked at each step even if the result is
+not included in the final relation. This \texttt{WHERE} condition is evaluated
+at each vertex along a possible path.
+
+The \texttt{LENGTH} accumulator which is implicitly created is intialised with
+a known rate-of change. This allows queries which have a bounded depth in the
+\texttt{WHERE} clause to run exhaustively within the appropriate bounds, since
+Grapht knows that a shorter \texttt{LENGTH} will never arise further along the
+path. Although this is a desirable property, there is currently no way for
+query writers to specify that other accumulated variables have a known rate of
+change, although future versions of the query processor may provide
+functionality for this.
+
+The prioritiser and uniqueness constraints for \texttt{getPaths} are very
+simply extracted from the \texttt{TRAVERSE BY} clause. Similarly, a limit  to
+the number of paths to retrieve is read directly from the \texttt{LIMIT}
+clause of the query.
+
+
+

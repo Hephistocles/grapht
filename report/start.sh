@@ -1,1 +1,1 @@
-latexmk -pvc -shell-escape -pdf main.tex
+latexmk -pvc -shell-escape -pdf $1

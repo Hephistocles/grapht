@@ -1,0 +1,13 @@
+{
+	"folders":
+	[
+		{
+			"path": ".",
+		    "file_exclude_patterns": ["*.aux", "*.pyo", "*.exe", "*.dll", "*.obj","*.o", "*.a", "*.lib", "*.so", "*.dylib", "*.ncb", "*.sdf", "*.suo", "*.pdb", "*.idb", ".DS_Store", "*.class", "*.psd", "*.db", "*.sublime-workspace", "*.sty", "*.bbl", "*.bcf", "*.blg", "*.fls", "*.toc", "*.tex.latexmain", "*.log", "*.run.xml", "*.synctex.gz*", "*.lof", "*.fdb_latexmk", "*.out", "*.swp", ".refresh", "*.pdf"]
+		}
+	],
+	"options": {
+		"root": "acs-dissertation.tex",
+		"pdf": "acs-dissertation"
+	}
+}

@@ -1,0 +1,106 @@
+Graph databases are an alternative to traditional Relational Database Systems
+(RDBMS), which improve access speeds for some queries by prioritising access to
+related entities, rather than expecting traversal through a fixed schema. This
+design can more naturally represent relationships between data in many fields,
+from the analysis of gene networks in biology to social network recommendation
+engines.  It can provide huge performance improvements for graph-centric
+queries, such as shortest path queries. 
+
+For other queries, however -- such as aggregation of otherwise unrelated data
+items -- it is far more efficient to rely on a known schema over a fixed set of
+rows for fast access. There are many trade-offs to be made between the RDMS and
+Graph Database model, but the core division is that where an RDBMS is optimised
+for aggregated data, a graph database is optimised for highly connected data.
+In practice, however, although it is certainly the case that some datasets are
+more highly connected than others, many of today's business operations cannot
+be classified according to that metric alone. 
+
+%TODO: Two models fundamentally similar - both focus on relations, but optimised in different ways
+
+Social networks are often used as an important example of a highly connected
+dataset today. However the reality is that, although relationships between
+friends are ideally modelled as a graph, this is not the case across the board.
+Performing queries across all users -- such as discovering users who live
+within particular geographic bounds -- is much less efficient when every single
+edge between users needs to be considered during a graph traversal. This
+heterogeneity, coupled with the common uncertainty at design-time about which
+part of an application will be most frequently used, makes it difficult to
+choose an ideal database system for any particular application.
+
+
+\section{Research Goals}
+
+The optimisations made to increase the performance of graph databases for
+certain problem necessarily sacrifice performance for others. Thus it seems
+optimistic to aim to create a system which performs both as well as Neo4J for
+graph-centric problems and as well as PostgreSQL for row-centric problems.
+Instead, the aims for this project were to improve on the worst-case
+performance of these systems, while still minimising the loss in best-case
+performance. By doing this, we can provide a system which provides a higher
+average-case performance in the situation where graph-centric queries and
+row-centric queries are both used. More concretely, there were four goals
+for this project. Two are fairly trivial improvements over existing systems,
+while the other two arise precisely because of the hybrid nature of the system.
+Note that for this research project, we limit our attention to data-retrieval queries only.
+
+\subsection*{1: Increase performance of graph queries compared to a relational engine}
+
+Relational database engines perform poorly for graph-centric queries such as path-finding.
+A hybrid engine should perform better than this, even if it cannot achieve performance on
+par with purely graph-centric engines.
+
+\subsection*{2: Increase performance of row queries compared to a graph engine}
+
+Conversely, graph engines perform poorly for row-centric queries such as aggregation
+over all nodes, and a hybrid engine should aim to perform better than this.
+
+\subsection*{3: Increase performance of hybrid queries compared to both engines}
+
+Some queries may have multiple components to them, some of which would best be
+handled by a graph engine, while others best by a relational system. For
+example, we may wish to identify two users who are geographically closest to
+one another, and find a path between them through the social graph. Finding
+geographical neighbours involves comparisons between all nodes, not just ones
+which are local to one another in the social graph. This would thus be well
+handled by a row-centric system, and less well by a graph-centric one. The
+path-finding component, however, would perform much better under the graph
+system. Under either system, some component of the query would necessarily
+perform badly and cause a performance bottleneck. A hybrid system ought to not
+be affected so badly by either bottleneck, and may thus outperform both systems
+for this kind of query.
+
+\subsection*{4: Expose a coherent interface for the hybrid system}
+
+Relational databases have a well-established query interface in the form of
+\textit{SQL}.  Queries in SQL aim to create and select particular rows from the
+database, and are thus inherently row-centric, making it difficult for a
+programmer to even express graph-centric queries. Although the graph database
+community have not yet settled on a single query language to act as SQL's
+graph-centric counterpart, the two most popular languages -- Gremlin and Cypher
+-- suffer from the opposite problem: they are not well suited to expressing
+row-centric queries considering all nodes in the graph. Since a hybrid system
+must aim to be equally well suited in terms of performance to either sort of
+query, it should not give precedence to either in terms of interface. Graph
+queries should be as easy to express using the hybrid system as row-centric
+ones.
+
+
+TODO: Mention that I'm only interested here in read-query ability, and that updates or insertions are not covered
+ (In future work we can say that these shouoldn't be too difficult to add some sort of cache coherency model)
+
+
+
+In the next chapter, I will first give a brief introduction to the
+technologies involved in both relational and graph databases, including their
+relative strengths and weaknesses. I will continue by providing a brief
+overview of the surrounding research landscape, particularly  focussing on
+previous attempts to bring together graph and row-based systems. Chapter
+\ref{ch:implementation} discusses the implementation of a research prototype
+aiming to satisfy all four of my research goals: \textit{Grapht}. The success of
+this prototype is experimentally evaluated in Chapter \ref{ch:evaluation},
+along with direct comparisons between Neo4J and PostgreSQL. These comparisons
+serve not only to provide a point of reference to measure Grapht against, but
+also to validate the claims made above about the relative performance of the
+two systems in satisfying different types of query. Finally, Chapter
+\ref{ch:conclusion} summarises the findings made, and discusses possible
+directions for future research.

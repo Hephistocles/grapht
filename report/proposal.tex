@@ -28,16 +28,16 @@ layer.
 
 \section{Introduction, approach and outcomes}
 
-Graph databases are an alternative to traditional relational databases,
-which improve access speeds for some queries by prioritising access to related
+Graph databases are an alternative to traditional relational databases, which
+improve access speeds for some queries by prioritising access to related
 entities, rather than expecting traversal through a fixed schema. This can
-provide huge performance improvements for graph-centric queries, such as 
-shortest path queries. For other queries, however -- such as aggregation of 
-unconnected data items -- it is far more efficient to rely on a
- fixed schema for fast access. A recent project\cite{crackle} has shown that it
-is possible to unify both graph and relational database paradigms by providing
-graph-focused pre-fetching of data from an underlying relational database. 
-I now aim to further unify the systems in two ways.
+provide huge performance improvements for graph-centric queries, such as
+shortest path queries. For other queries, however -- such as aggregation of
+otherwise unrelated data items -- it is far more efficient to rely on a fixed
+schema for fast access. A recent project\cite{crackle} has shown that it is
+possible to unify both graph and relational database paradigms by providing
+graph-focused pre-fetching of data from an underlying relational database.  I
+now aim to further unify the systems in two ways.
 
 My first contribution is to present a declarative query language 
 targeting this hybrid system. Two interfaces to the data exist: going

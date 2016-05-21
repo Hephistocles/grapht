@@ -1,0 +1,67 @@
+%% 
+%% ACS project dissertation template. 
+%% 
+%% Currently designed for printing two-sided, but if you prefer to 
+%% print single-sided just remove ",twoside,openright" from the 
+%% \documentclass[] line below. 
+%%
+%%
+%%   SMH, May 2010. 
+
+
+\documentclass[a4paper,12pt,twoside,openright]{report}
+
+
+%%
+%% EDIT THE BELOW TO CUSTOMIZE
+%%
+
+\def\authorname{Christopher J. O. Little\xspace}
+\def\authorcollege{Emmanuel College\xspace}
+\def\authoremail{cl554@cam.ac.uk}
+\def\dissertationtitle{Grapht: A Hybrid Database System for Flexible Retrieval of Graph-structured Data}
+\def\wordcount{\input{|"./count.sh content.tex"}}
+
+\usepackage[
+backend=biber,
+sorting=ynt
+]{biblatex}
+\addbibresource{main.bib}
+
+\usepackage{epsfig,graphicx,parskip,setspace,tabularx,xspace} 
+
+%% START OF DOCUMENT
+\begin{document}
+
+
+%% FRONTMATTER (TITLE PAGE, DECLARATION, ABSTRACT, ETC) 
+\pagestyle{empty}
+\singlespacing
+\input{titlepage}
+\onehalfspacing
+\input{declaration}
+\singlespacing
+\input{abstract}
+
+\pagenumbering{roman}
+\setcounter{page}{0}
+\pagestyle{plain}
+\tableofcontents
+\listoffigures
+\listoftables
+
+\onehalfspacing
+
+%% START OF MAIN TEXT 
+\input{content.tex}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% the bibliography
+\addcontentsline{toc}{chapter}{Bibliography}
+\printbibliography
+
+\appendix
+\singlespacing
+
+
+\end{document}
