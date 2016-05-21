@@ -36,3 +36,5 @@ lib/
 *.out
 *.swp
 .refresh
+hdb-compare
+*.lot

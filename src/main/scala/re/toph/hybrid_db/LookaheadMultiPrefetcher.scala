@@ -11,7 +11,7 @@ import scala.collection.mutable.{ListBuffer, Set}
 
 class LookaheadMultiPrefetcher(hops: Int)(implicit connection:java.sql.Connection) extends Prefetcher {
 
-  override def get(k: Long): (GraphNode, List[GraphNode]) = {
+  override def innerGet(k: Long): (GraphNode, List[GraphNode]) = {
     var edgeMap = Map[Long, (ListBuffer[Edge], Map[String, Any])]()
 
     val idsWeWant = Set[Long](k)

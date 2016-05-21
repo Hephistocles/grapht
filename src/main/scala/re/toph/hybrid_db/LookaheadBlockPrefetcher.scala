@@ -1,12 +1,8 @@
 package re.toph.hybrid_db
 
-import java.sql.ResultSet
-
-import java.util.HashMap
-import anorm.{ SQL, SqlParser }
+import anorm.SQL
 
 import scala.collection.mutable.ListBuffer
-import scala.collection.parallel.immutable
 
 /**
   * Created by christoph on 28/04/16.
@@ -15,7 +11,7 @@ import scala.collection.parallel.immutable
 
 class LookaheadBlockPrefetcher(dist: Long)(implicit connection: java.sql.Connection) extends Prefetcher {
 
-  override def get(k: Long): (GraphNode, List[GraphNode]) = {
+  override def innerGet(k: Long): (GraphNode, List[GraphNode]) = {
 
     // TODO: I don't like blocking on prefetching. Can we do prefetch in a BG thread or something?
     val sql =

@@ -37,8 +37,7 @@ object Timer {
 
   }
 
-
-  def time[R](name:String, block: => R): R = {
+  def timeWithResult[R](name:String, block: => R): (TimerResult, R) = {
 
     val last = root
     root = last.addSub(name)
@@ -50,8 +49,14 @@ object Timer {
     val diff = t1 - t0
 
     root.addReading(diff)
+    val th = root
     root = last
-    result
+    (th, result)
+
+  }
+
+  def time[R](name:String, block: => R): R = {
+    timeWithResult(name, block)._2
   }
 
   def timeString(time: Long) : String = {

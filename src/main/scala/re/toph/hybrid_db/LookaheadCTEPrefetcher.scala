@@ -11,53 +11,25 @@ import scala.collection.mutable.ListBuffer
 
 class LookaheadCTEPrefetcher(hops: Int = 3)(implicit connection: java.sql.Connection) extends Prefetcher {
 
-  override def get(k: Long): (GraphNode, List[GraphNode]) = {
+  override def innerGet(k: Long): (GraphNode, List[GraphNode]) = {
 
-    // TODO: I don't like blocking on prefetching. Can we do prefetch in a BG thread or something?
-    val sqlBits = List(
-      """(SELECT points.id, lat, lng, 0,0,0 FROM
-        |  points
-        |  WHERE points.id={id})""".stripMargin,
-      """(SELECT points.id, lat, lng, A.id1, A.id2, A.dist FROM
-         |edges A
-         |  JOIN points ON points.id=A.id1
-         |  WHERE A.id={id})""".stripMargin,
+    val sql = SQL(
       """
-        |(SELECT points.id, lat, lng, B.id1, B.id2, B.dist FROM
-        | edges A
-        |   JOIN edges B ON A.id2=B.id1
-        |   JOIN points ON points.id=B.id1
-        |   WHERE A.id1={id})""".stripMargin,
-      """
-        |(SELECT points.id, lat, lng, C.id1, C.id2, C.dist FROM
-        | edges A
-        |   JOIN edges B ON A.id2=B.id1
-        |   JOIN edges C ON B.id2=C.id1
-        |   JOIN points ON points.id=C.id1
-        |   WHERE A.id1={id})""".stripMargin,
-      """
-        |(SELECT points.id, lat, lng, D.id1, D.id2, D.dist FROM
-        | edges A
-        |   JOIN edges B ON A.id2=B.id1
-        |   JOIN edges C ON B.id2=C.id1
-        |   JOIN edges D ON C.id2=D.id1
-        |   JOIN points ON points.id=D.id1
-        |   WHERE A.id1={id})""".stripMargin,
-      """
-      |(SELECT points.id, lat, lng, E.id1, E.id2, E.dist FROM
-      | edges A
-      |   JOIN edges B ON A.id2=B.id1
-      |   JOIN edges C ON B.id2=C.id1
-      |   JOIN edges D ON C.id2=D.id1
-      |   JOIN edges E ON D.id2=E.id1
-      |   JOIN points ON points.id=E.id1
-      |   WHERE A.id1={id})""".stripMargin
-    )
-    if (hops>sqlBits.length) throw new Error(s"Can't do that many prefetch hops: $hops > ${sqlBits.length}")
+        |WITH RECURSIVE ans (id1, id2, dist, lat, lng, hops) AS
+        |   (SELECT {id}::bigint, {id}::bigint, 0::bigint, lat, lng, 0 FROM points WHERE id={id}
+        |
+        |   UNION ALL
+        |
+        |   SELECT ans.id2, edges.id2, edges.dist, points.lat, points.lng, ans.hops + 1 FROM
+        |     ans JOIN
+        |     edges ON ans.id2=edges.id1 JOIN
+        |     points ON ans.id2=points.id
+        |     WHERE ans.hops < {hops}
+        |   )
+        |SELECT id1, id2, dist, id1 as id, lat, lng FROM ans WHERE hops > 0;
+      """.stripMargin)
+      .on("id"->k, "hops"->hops)
 
-    val sql =
-      SQL(sqlBits.take(hops).mkString(" UNION "))
-    .on("id"->k)
     val resultSet = Timer.time("DB", sql())
 
     var ess = Map[Long, (ListBuffer[Edge], Map[String, Any])]()
@@ -70,7 +42,7 @@ class LookaheadCTEPrefetcher(hops: Int = 3)(implicit connection: java.sql.Connec
           (k.substring(k.indexOf('.') + 1), s)
         })
 
-      // if this is an edge for a new node, create a blank node
+      // if this is an edge from a new node, create a blank node
       if (! ess.contains(row[Long]("id1"))) {
         ess += row[Long]("id1") -> (ListBuffer[Edge](), map)
       }

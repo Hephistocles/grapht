@@ -52,31 +52,44 @@ package object AStar extends BenchmarkTest {
   def go()(implicit db: GraphDatabaseService, connection:Connection,connection2: Neo4jREST, wsclient:NingWSClient, ec:ExecutionContext): Unit = {
 
 //    //TODO: lookahead join doesn't work atm. Please try again later.
-    val lookaheads = (45 to 50 by 5)
-        .map(b => (s"Lookahead ($b)", new LookaheadMultiPrefetcher(b)))
+    val prefetchers = (40 to 50 by 5)
+                          .map(b => (s"Lookahead ($b)", new LookaheadMultiPrefetcher(b))) ++
+//                      List(10000, 20000)
+//                          .map(b => (s"Block ($b)", new LookaheadBlockPrefetcher(b))) ++
+                      (1 to 5 by 1)
+                          .map(b => (s"CTE Lookahead ($b)", new LookaheadCTEPrefetcher(b)))
 
-//    val blocks = List(20000, 30000,50000)
-//        .map(b => (s"Block ($b)", new LookaheadBlockPrefetcher(b)))
+    val routes = List(
+      (171677, 164352),
+      (132308, 20756),
+      (70188, 151443),
+      (54469, 231496),
+      (66089, 30814),
+      (176648, 126808),
+      (58197, 4362)
+    )
 
-    val prefetchers = lookaheads // ++
-
-    val (from, to) = (1, 50)
-    val tests = /* List(
-      ("East to West Neo", () => neo2()),
-      ("East to West No Search", () => neo(58197, 4362)),
-        ("Neo", () => neo(from, to)),
-        ("PSQL", () => psql(from, to))
+    val tests = List(
+//      ("East to West Neo", () => neo2()),
+//      ("East to West No Search", () => neo(58197, 4362)),
+      ("Neo", () => neo(1, 50)),
+      ("A* Test", () => {
+        val astar = new ASFAWEF(new Graph(new LookaheadMultiPrefetcher(30)(connection)))(connection)
+        println(astar.find(1, 50))
+      }),
+      ("Grapht ", () => graphtLocal(1, 50, new LookaheadMultiPrefetcher(30)(connection)))
+//        ("PSQL", () => psql(from, to))
 //      ("SQL", () => unionSQL(hops, id)),
 //      ("SQL CTE", () => CTESQL(hops, id))
-    ) ++ */ prefetchers.flatMap({
+    ) ++ prefetchers.flatMap({
       case (s, p) =>
         List(
 //          (s"Grapht $s", () => grapht(from, to, p)),
-          (s"Grapht Local $s", () => graphtLocal(from, to, p))
+//          (s"Grapht Local $s", () => graphtLocal(from, to, p))
         )
     })
 
-    timeAll(tests.toList, 3)
+    timeAll(tests.toList, 5)
   }
 
   def neo2()(implicit db: GraphDatabaseService): (Int,Double) = {
@@ -150,6 +163,14 @@ package object AStar extends BenchmarkTest {
       tx.close()
     }
   }
+  /*
+  FYI: something cypher-y
+  START startNode = node(269604), endNode = node(269605)
+  MATCH path=(startNode)-[:CAR_MAIN_NODES_RELATION*]->(endNode)
+  RETURN path AS shortestPath, reduce(cost=0, rel in relationships(path) | cost + rel.edgeLength) AS totalCost
+  ORDER BY totalCost ASC
+  LIMIT 3
+   */
 
   def cypher(hops: Int, n: Long)(implicit connection: Neo4jREST, wsclient:NingWSClient, ec:ExecutionContext): List[Map[String, Option[AnyVal]]] = {
     Cypher(
@@ -254,7 +275,7 @@ package object AStar extends BenchmarkTest {
       ))
 
     def prioritiser(edge:Edge, vertex:GraphNode, sofar: Result)(implicit connection:Connection): Double = {
-      val h = heuristic(vertex.properties("lat").asInstanceOf[Long],vertex.properties("lng").asInstanceOf[Long], targetLat, targetLong)
+      val h = 1000*heuristic(vertex.properties("lat").asInstanceOf[Long],vertex.properties("lng").asInstanceOf[Long], targetLat, targetLong)
       //      + edge.properties("dist").asInstanceOf[Long]
       val g = sofar.get("dist").asInstanceOf[Long]
 
@@ -269,7 +290,7 @@ package object AStar extends BenchmarkTest {
         //        new LessThanOrEqualCondition[Int]("length", 3, Increasing(Some(1)))
       )
 
-    val rs = Grapht.query(g, id, results, condition, prioritiser)
+    val rs = Grapht.query(g, id, results, condition, prioritiser, 1)
       .map({
         m => (m("dist").asInstanceOf[Long], m("path").asInstanceOf[String].split(",").map(_.toLong))
       }).head

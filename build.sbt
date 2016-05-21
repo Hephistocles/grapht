@@ -1,6 +1,6 @@
 scalaVersion := "2.11.6"
 
-mainClass in (Compile, run) := Some("re.toph.hybrid_db.HelloWorld")
+mainClass in (Compile, run) := Some("re.toph.hybrid_db.EntryPoint")
 
 resolvers ++= Seq(
   "anormcypher" at "http://repo.anormcypher.org/",

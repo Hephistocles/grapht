@@ -9,6 +9,8 @@ trait BenchmarkTest {
       for (i <- 0 to iterations-1) {
         l.foreach({
           case (s, f) => {
+            // suggest a gc dump before we start
+            System.gc()
             Timer.time(s, f())
           }
         })

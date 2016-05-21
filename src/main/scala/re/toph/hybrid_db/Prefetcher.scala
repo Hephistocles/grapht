@@ -1,7 +1,6 @@
 package re.toph.hybrid_db
 
-import java.sql.{ResultSet, Connection, DriverManager}
-import java.util
+import java.sql.{Connection, DriverManager, ResultSet}
 
 import anorm.Row
 
@@ -13,6 +12,8 @@ trait Prefetcher {
   val url    = "jdbc:postgresql://localhost/christoph"
   val user   = "christoph"
   val pass   = "LockDown1"
+  var callCount = 0
+  var fetchCount = 0
 
   Class.forName(driver)
   val connection:Connection =  DriverManager.getConnection(url, user, pass)
@@ -36,6 +37,13 @@ trait Prefetcher {
     map
   }
 
+  def get(k:Long) = {
+    callCount += 1
+    val res = innerGet(k)
+    fetchCount += res._2.length
+    res
+  }
+
   // To be implemented by sub-classes
-  def get(k: Long) : (GraphNode, List[GraphNode])
+  def innerGet(k: Long) : (GraphNode, List[GraphNode])
 }

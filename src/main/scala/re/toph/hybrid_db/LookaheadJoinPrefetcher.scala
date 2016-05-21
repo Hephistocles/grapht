@@ -11,7 +11,7 @@ import scala.collection.mutable.ListBuffer
 
 class LookaheadJoinPrefetcher(hops: Int = 3)(implicit connection: java.sql.Connection) extends Prefetcher {
 
-  override def get(k: Long): (GraphNode, List[GraphNode]) = {
+  override def innerGet(k: Long): (GraphNode, List[GraphNode]) = {
 
     // TODO: I don't like blocking on prefetching. Can we do prefetch in a BG thread or something?
     val sqlBits = List(

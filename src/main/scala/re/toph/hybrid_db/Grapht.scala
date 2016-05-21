@@ -11,9 +11,9 @@ import scala.collection.mutable.ListBuffer
   */
 object Grapht {
 
-  case class PartialPath(lastVertex : GraphNode, sofar: Result, priority: Double)
+  case class PartialPath(lastVertex : GraphNode, sofar: Result, priority: Double, closed: Set[Long])
 
-  def query(g: Graph, _id: Long, _sofar: Result, condition: CompletionCondition, prioritiser: (Edge, GraphNode, Result) => Double, limit :Int = 1)(implicit connection:Connection): ListBuffer[Map[String, Any]] = {
+  def query(g: Graph, _id: Long, _sofar: Result, condition: CompletionCondition, prioritiser: (Edge, GraphNode, Result) => Double, limit :Int = 2)(implicit connection:Connection): ListBuffer[Map[String, Any]] = {
 
     // TODO: I don't think this handles uniqueness at all
 
@@ -28,9 +28,10 @@ object Grapht {
     // initialise start vertex
     val startVertex = g.getVertex(_id)
     val initResult = _sofar.mapVertex((acc) => acc.acc(startVertex.properties))
-    val init = PartialPath(startVertex, initResult, 0)
+    val init = PartialPath(startVertex, initResult, 0, Set(startVertex.id))
     queue.add(init)
     open.put(_id, init)
+    var popCount = 0
 
     while (!queue.isEmpty()) {
 
@@ -38,13 +39,15 @@ object Grapht {
       val vertex = part.lastVertex
       val sofar = part.sofar
       closedVertices.put(vertex.id, part)
+      popCount += 1
 
       if (condition.check(sofar)) {
         pathResults += sofar.result
 
         // check we haven't overstepped our limits
-        if (pathResults.length >= limit)
-          return pathResults
+        if (pathResults.length >= limit) {
+          println(popCount)
+          return pathResults}
       }
 
       // Only consider neighbours if it could be beneficial
@@ -52,35 +55,39 @@ object Grapht {
 
         // Otherwise let's look at neighbours
         vertex.edges.foreach(e => {
-          val edgeResult = sofar.mapEdges(a => a.acc(e.properties))
 
-          // NB: this could hurt if we don't actually need the vertex!
-          val toVertex = g.getVertex(e.to)
-          val priority = prioritiser(e, toVertex, edgeResult)
-          val endPointResult = edgeResult.mapVertex(a => a.acc(toVertex.properties))
-          val newPath = PartialPath(toVertex, endPointResult, priority)
-
-          if (open.containsKey(e.to)) {
-            if (open.get(e.to).priority > priority) {
-              queue.remove(open.get(e.to))
-              open.remove(e.to)
-
-              open.put(e.to, newPath)
-              queue.add(newPath)
-            }
-          // have we visited this node before?
-          //   IF we have, only re-examine if the cost this time is lower than last time
-          } else if (closedVertices.containsKey(e.to)) {
-            if (closedVertices.get(e.to).priority > priority) {
-              open.put(e.to, newPath)
-              queue.add(newPath)
-            }
-          // Or if this is the first time we've seen this node, schedule it as normal
+          // TODO: only do this if we requested unique vertices
+          if (part.closed.contains(e.to))  {
+            // I think do nothing
           } else {
-            open.put(e.to, newPath)
-            queue.add(newPath)
+
+            // NB: this could hurt if we don't actually need the vertex!
+            val toVertex = g.getVertex(e.to)
+
+            val edgeResult = sofar.mapEdges(a => a.acc(e.properties))
+            val priority = prioritiser(e, toVertex, edgeResult)
+            val endPointResult = edgeResult.mapVertex(a => a.acc(toVertex.properties))
+            val newPath = PartialPath(toVertex, endPointResult, priority, part.closed + e.to)
+
+            if (open.containsKey(e.to)) {
+              if (limit!=1
+                // if the limit is 1, then we should discard repeated paths (and become A*)
+                // if not, we need every path we can get!
+                || open.get(e.to).priority > priority) {
+
+                open.put(e.to, newPath)
+                queue.add(newPath)
+              }
+            } else {
+              open.put(e.to, newPath)
+              queue.add(newPath)
+            }
           }
+
+
         })
+      } else {
+        println("Avoided a search")
       }
     }
 
