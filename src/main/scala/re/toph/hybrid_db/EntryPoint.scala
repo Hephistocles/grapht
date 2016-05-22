@@ -106,8 +106,9 @@ object EntryPoint {
 							case (name, size, p) =>
 								() => {
 									// now would be a good time to GC. During the test, not so much.
-									val g = new Graph(p)
-									val astar = new ASFAWEF(g)
+									val g = new Graph(new LookaheadMultiPrefetcher(50))
+									val adaptor = new GraphtAdaptor(g)
+									val astar = new ASFAWEF(adaptor)
 									System.gc()
 									val (time, _) = Timer.timeWithResult(s"$name,$start,$end", {
 										astar.find(start, end)
@@ -142,7 +143,7 @@ object EntryPoint {
 
 
 
-	def graphTest()(implicit db: GraphDatabaseService, connection:Connection): Unit = {
+	def graphTest()(implicit  connection:Connection): Unit = {
 
 		val RADIUS = 6371
 		def heuristic(latitude1:Long, longitude1:Long, latitude2:Long, longitude2:Long ) : Double =
@@ -172,7 +173,7 @@ object EntryPoint {
 			res
 		}
 
-		def neo(from:Long, to:Long): Unit = {
+		def neo(from:Long, to:Long)(implicit db : GraphDatabaseService): Unit = {
 			val tx = db.beginTx()
 			try {
 
@@ -202,13 +203,37 @@ object EntryPoint {
 			}
 		}
 
+		def neo2(start:Long, end:Long)(implicit db : GraphDatabaseService) : Unit = {
+			val tx = db.beginTx()
+			try {
+        val adaptor = new NeoAdaptor()(db)
+        val astar = new ASFAWEF(adaptor)
+        val (time, res) = Timer.timeWithResult(s"Grapht,$start,$end", {
+          astar.find(start, end)
+        })
+        printf("neo2	%d	%d	%d\n", end, res.dist.toLong, time.time)
+        Timer.clearTimes()
+			} finally {
+				tx.close()
+			}
+		}
 		def grapht(start:Long, end:Long) : Unit = {
-			val astar = new ASFAWEF(new Graph(new LookaheadMultiPrefetcher(50)))
-				val (time, res) = Timer.timeWithResult(s"Grapht,$start,$end", {
-					astar.find(start, end)
-				})
-				printf("Grapht	%d	%d	%d\n", end, res.dist.toLong, time.time)
-				Timer.clearTimes()
+			val adaptor = new GraphtAdaptor(new Graph(new LookaheadMultiPrefetcher(50)))
+			val astar = new ASFAWEF(adaptor)
+			val (time, res) = Timer.timeWithResult(s"Grapht,$start,$end", {
+				astar.find(start, end)
+			})
+			printf("Grapht	%d	%d	%d\n", end, res.dist.toLong, time.time)
+			Timer.clearTimes()
+		}
+		def psql2(start:Long, end:Long) : Unit = {
+			val adaptor = new GraphtAdaptor(new Graph(new NullPrefetcher()))
+			val astar = new ASFAWEF(adaptor)
+			val (time, res) = Timer.timeWithResult(s"Grapht,$start,$end", {
+				astar.find(start, end)
+			})
+			printf("Grapht	%d	%d	%d\n", end, res.dist.toLong, time.time)
+			Timer.clearTimes()
 		}
 		def psql(from:Long, to: Long)(implicit connection: Connection): Unit = {
 			val (time, rs) = Timer.timeWithResult(s"Grapht,$from,$to", {
@@ -241,15 +266,17 @@ object EntryPoint {
       routes.foreach {
         case (start, end) =>
 					System.gc()
-					neo(start, end)
+					neo2(start, end)
 					System.gc()
 					grapht(start, end)
-			}
-			routes.foreach {
-				case (start, end) =>
 					System.gc()
-					psql(start, end)
+					psql2(start, end)
 			}
+//			routes.foreach {
+//				case (start, end) =>
+//					System.gc()
+//					psql(start, end)
+//			}
 		}
 
 	}

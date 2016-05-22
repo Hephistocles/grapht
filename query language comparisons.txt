@@ -1,0 +1,14 @@
+Shortest path
+=============
+
+Cypher
+------
+START startNode = node(1), endNode = node(50)
+MATCH path=(startNode)-[:Road*]->(endNode)
+RETURN path AS shortestPath, reduce(cost=0, rel in relationships(path) | cost + rel.edgeLength) AS totalCost
+ORDER BY totalCost ASC
+
+-- OR --
+
+MATCH (a:Point {id: 1}),(b:Point { id:50 }), p = shortestPath((a)-[*]-(b))
+RETURN p
