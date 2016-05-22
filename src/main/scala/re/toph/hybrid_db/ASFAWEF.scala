@@ -50,31 +50,9 @@ class ASFAWEF(g : Graph)(implicit connection : Connection) {
 
     res
   }
-//    // A*
-//    initialize the open list
-//      initialize the closed list
-//      put the starting node on the open list (you can leave its f at zero)
-//
-//  while the open list is not empty
-//    find the node with the least f on the open list, call it "q"
-//  pop q off the open list
-//    generate q's 8 successors and set their parents to q
-//  for each successor
-//  if successor is the goal, stop the search
-//  successor.g = q.g + distance between successor and q
-//  successor.h = distance from goal to successor
-//  successor.f = successor.g + successor.h
-//
-//  if a node with the same position as successor is in the OPEN list \
-//  which has a lower f than successor, skip this successor
-//  if a node with the same position as successor is in the CLOSED list \
-//  which has a lower f than successor, skip this successor
-//  otherwise, add the node to the open list
-//  end
-//  push q on the closed list
-//    end
-
   def find(start:VertexKey, end:VertexKey): PartResult = {
+
+//    var getCount = 0
 
     val goalNode = getVertex(end)
     val openSet = new HashMap[Long, PartResult]()
@@ -84,6 +62,7 @@ class ASFAWEF(g : Graph)(implicit connection : Connection) {
     })
 
     val startVertex = getVertex(start)
+//    getCount += 2
     val init = PartResult(start, startVertex, 0d, 0d, null)
     openQueue.add(init)
     openSet.put(start, init)
@@ -97,17 +76,18 @@ class ASFAWEF(g : Graph)(implicit connection : Connection) {
 //
 //    val openQueue = mutable.PriorityQueue[PartResult](openSet(start))
 
-    var popCount = 0
+//    var popCount = 0
     while (!openQueue.isEmpty()) {
       // pop most likely element
       val q = openQueue.poll()
-      popCount +=1
+//      popCount += 1
       val vertex = q.node
       closedSet.put(vertex.id, q)
 //      closedSet += (q.id -> q)
 
       if (q.id == end) {
-        return q}
+        return q
+      }
 
       // get q's successors
       vertex.edges.foreach(edge => {
@@ -116,6 +96,7 @@ class ASFAWEF(g : Graph)(implicit connection : Connection) {
           // do nothing
         } else {
           val targetNode = getVertex(edge.to)
+//          getCount += 1
           val dist = q.dist + edge.properties("dist").asInstanceOf[Long]
           val priority = dist + 1000*heuristic(targetNode, goalNode)
           val newPath = PartResult(edge.to, targetNode, dist, priority, q)

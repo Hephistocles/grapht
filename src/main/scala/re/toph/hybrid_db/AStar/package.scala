@@ -52,11 +52,11 @@ package object AStar extends BenchmarkTest {
   def go()(implicit db: GraphDatabaseService, connection:Connection,connection2: Neo4jREST, wsclient:NingWSClient, ec:ExecutionContext): Unit = {
 
 //    //TODO: lookahead join doesn't work atm. Please try again later.
-    val prefetchers = (40 to 50 by 5)
+    val prefetchers = (50 to 100 by 5)
                           .map(b => (s"Lookahead ($b)", new LookaheadMultiPrefetcher(b))) ++
 //                      List(10000, 20000)
 //                          .map(b => (s"Block ($b)", new LookaheadBlockPrefetcher(b))) ++
-                      (1 to 5 by 1)
+                      (5 to 10 by 1)
                           .map(b => (s"CTE Lookahead ($b)", new LookaheadCTEPrefetcher(b)))
 
     val routes = List(
@@ -69,15 +69,17 @@ package object AStar extends BenchmarkTest {
       (58197, 4362)
     )
 
+    val from = 1
+    val to = 50
     val tests = List(
 //      ("East to West Neo", () => neo2()),
 //      ("East to West No Search", () => neo(58197, 4362)),
-      ("Neo", () => neo(1, 50)),
-      ("A* Test", () => {
-        val astar = new ASFAWEF(new Graph(new LookaheadMultiPrefetcher(30)(connection)))(connection)
-        println(astar.find(1, 50))
-      }),
-      ("Grapht ", () => graphtLocal(1, 50, new LookaheadMultiPrefetcher(30)(connection)))
+      ("Neo", () => neo(1, 50))
+//      ("A* Test", () => {
+//        val astar = new ASFAWEF(new Graph(new LookaheadMultiPrefetcher(30)(connection)))(connection)
+//        println(astar.find(1, 50))
+//      }),
+//      ("Grapht ", () => graphtLocal(1, 50, new LookaheadMultiPrefetcher(30)(connection)))
 //        ("PSQL", () => psql(from, to))
 //      ("SQL", () => unionSQL(hops, id)),
 //      ("SQL CTE", () => CTESQL(hops, id))
@@ -85,11 +87,11 @@ package object AStar extends BenchmarkTest {
       case (s, p) =>
         List(
 //          (s"Grapht $s", () => grapht(from, to, p)),
-//          (s"Grapht Local $s", () => graphtLocal(from, to, p))
+          (s"Grapht Local $s", () => graphtLocal(from, to, p))
         )
     })
 
-    timeAll(tests.toList, 5)
+    timeAll(tests.toList, 2)
   }
 
   def neo2()(implicit db: GraphDatabaseService): (Int,Double) = {

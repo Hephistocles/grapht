@@ -15,6 +15,7 @@ class LookaheadMultiPrefetcher(hops: Int)(implicit connection:java.sql.Connectio
     var edgeMap = Map[Long, (ListBuffer[Edge], Map[String, Any])]()
 
     val idsWeWant = Set[Long](k)
+    val idsWeHave = Set[Long]()
 
     for (i <- 0 to hops) {
       val sql = SQL(
@@ -27,6 +28,7 @@ class LookaheadMultiPrefetcher(hops: Int)(implicit connection:java.sql.Connectio
         + idsWeWant.toString().substring(3))
       val result = Timer.time("DB", sql())
 
+      idsWeHave ++= idsWeWant
       idsWeWant.clear()
 
       result.foreach(row => {
@@ -44,7 +46,7 @@ class LookaheadMultiPrefetcher(hops: Int)(implicit connection:java.sql.Connectio
 
         edgeMap(row[Long]("id1"))._1 += Edge(row[Long]("id1"), row[Long]("id2"), map)
 
-        if (! edgeMap.contains(row[Long]("id2"))) {
+        if (! edgeMap.contains(row[Long]("id2")) && !idsWeHave.contains(row[Long]("id2"))) {
           // This destination has not been explored yet
           idsWeWant += row[Long]("id2")
         }
