@@ -1,0 +1,75 @@
+[0m[[31merror[0m] [0m/home/christoph/Documents/dev/grapht/src/main/scala/re/toph/hybrid_db/EntryPoint.scala:109: not found: value s[0m
+[0m[[31merror[0m] [0m									val (time, _) = Timer.timeWithResult(s"$s,$start,$end", {[0m
+[0m[[31merror[0m] [0m									                                        ^[0m
+[0m[[31merror[0m] [0m/home/christoph/Documents/dev/grapht/src/main/scala/re/toph/hybrid_db/EntryPoint.scala:112: value time is not a member of Any[0m
+[0m[[31merror[0m] [0m									printf("%s	%d	%d	%d	%d	%d	%d	%d	%d	", name, size, start, end, g.callCount, g.evictionCount, g.hitCount, g.missCount, time.time, time.subs("DB").time, time.subs("DB").count)[0m
+[0m[[31merror[0m] [0m									          	  	  	  	  	  	  	  	  	                                                                                       ^[0m
+[0m[[31merror[0m] [0m/home/christoph/Documents/dev/grapht/src/main/scala/re/toph/hybrid_db/EntryPoint.scala:112: value subs is not a member of Any[0m
+[0m[[31merror[0m] [0m									printf("%s	%d	%d	%d	%d	%d	%d	%d	%d	", name, size, start, end, g.callCount, g.evictionCount, g.hitCount, g.missCount, time.time, time.subs("DB").time, time.subs("DB").count)[0m
+[0m[[31merror[0m] [0m									          	  	  	  	  	  	  	  	  	                                                                                                  ^[0m
+[0m[[31merror[0m] [0m/home/christoph/Documents/dev/grapht/src/main/scala/re/toph/hybrid_db/EntryPoint.scala:112: value subs is not a member of Any[0m
+[0m[[31merror[0m] [0m									printf("%s	%d	%d	%d	%d	%d	%d	%d	%d	", name, size, start, end, g.callCount, g.evictionCount, g.hitCount, g.missCount, time.time, time.subs("DB").time, time.subs("DB").count)[0m
+[0m[[31merror[0m] [0m									          	  	  	  	  	  	  	  	  	                                                                                                                        ^[0m
+[0m[[31merror[0m] [0m/home/christoph/Documents/dev/grapht/src/main/scala/re/toph/hybrid_db/EntryPoint.scala:113: value subs is not a member of Any[0m
+[0m[[31merror[0m] [0m									time.subs.get("DB") match {[0m
+[0m[[31merror[0m] [0m									     ^[0m
+[0m[[31merror[0m] [0m/home/christoph/Documents/dev/grapht/src/main/scala/re/toph/hybrid_db/EntryPoint.scala:114: value time is not a member of Any[0m
+[0m[[31merror[0m] [0m										case Some(x) => printf("%d	%d\n",x.time,x.count)[0m
+[0m[[31merror[0m] [0m										                          	        ^[0m
+[0m[[31merror[0m] [0m/home/christoph/Documents/dev/grapht/src/main/scala/re/toph/hybrid_db/EntryPoint.scala:114: value count is not a member of Any[0m
+[0m[[31merror[0m] [0m										case Some(x) => printf("%d	%d\n",x.time,x.count)[0m
+[0m[[31merror[0m] [0m										                          	               ^[0m
+[0m[[31merror[0m] [0m/home/christoph/Documents/dev/grapht/src/main/scala/re/toph/hybrid_db/EntryPoint.scala:146: not found: value db[0m
+[0m[[31merror[0m] [0m			val tx = db.beginTx()[0m
+[0m[[31merror[0m] [0m			         ^[0m
+[0m[[31merror[0m] [0m/home/christoph/Documents/dev/grapht/src/main/scala/re/toph/hybrid_db/EntryPoint.scala:149: not found: value db[0m
+[0m[[31merror[0m] [0m				val junctionIndex =	db.index().forNodes("junctions")[0m
+[0m[[31merror[0m] [0m				                   	^[0m
+[0m[[31merror[0m] [0m/home/christoph/Documents/dev/grapht/src/main/scala/re/toph/hybrid_db/EntryPoint.scala:154: not found: value GraphAlgoFactory[0m
+[0m[[31merror[0m] [0m					val path = GraphAlgoFactory.aStar([0m
+[0m[[31merror[0m] [0m					           ^[0m
+[0m[[31merror[0m] [0m/home/christoph/Documents/dev/grapht/src/main/scala/re/toph/hybrid_db/EntryPoint.scala:155: not found: value ROAD[0m
+[0m[[31merror[0m] [0m						PathExpanders.forTypeAndDirection(ROAD, Direction.OUTGOING),[0m
+[0m[[31merror[0m] [0m						                                  ^[0m
+[0m[[31merror[0m] [0m/home/christoph/Documents/dev/grapht/src/main/scala/re/toph/hybrid_db/EntryPoint.scala:156: not found: value CommonEvaluators[0m
+[0m[[31merror[0m] [0m						CommonEvaluators.doubleCostEvaluator("distance"),[0m
+[0m[[31merror[0m] [0m						^[0m
+[0m[[31merror[0m] [0m/home/christoph/Documents/dev/grapht/src/main/scala/re/toph/hybrid_db/EntryPoint.scala:157: not found: type EstimateEvaluator[0m
+[0m[[31merror[0m] [0m						new EstimateEvaluator[java.lang.Double] {[0m
+[0m[[31merror[0m] [0m						    ^[0m
+[0m[[31merror[0m] [0m/home/christoph/Documents/dev/grapht/src/main/scala/re/toph/hybrid_db/EntryPoint.scala:158: not found: value heuristic[0m
+[0m[[31merror[0m] [0m							override def getCost(node1: Node, node2: Node): java.lang.Double = heuristic([0m
+[0m[[31merror[0m] [0m							                                                                   ^[0m
+[0m[[31merror[0m] [0m/home/christoph/Documents/dev/grapht/src/main/scala/re/toph/hybrid_db/EntryPoint.scala:168: not found: value path[0m
+[0m[[31merror[0m] [0m				printf("Neo4J 	%d	%d	%d\n", to, path.weight().toLong, time.time)[0m
+[0m[[31merror[0m] [0m				              	  	  	           ^[0m
+[0m[[31merror[0m] [0m/home/christoph/Documents/dev/grapht/src/main/scala/re/toph/hybrid_db/EntryPoint.scala:169: type mismatch;[0m
+[0m[[31merror[0m] [0m found   : Unit[0m
+[0m[[31merror[0m] [0m required: (String, Long, re.toph.hybrid_db.TimerResult)[0m
+[0m[[31merror[0m] [0m				Timer.clearTimes()[0m
+[0m[[31merror[0m] [0m				                ^[0m
+[0m[[31merror[0m] [0m/home/christoph/Documents/dev/grapht/src/main/scala/re/toph/hybrid_db/EntryPoint.scala:177: not found: value s[0m
+[0m[[31merror[0m] [0m				val (time, res) = Timer.timeWithResult(s"$s,$start,$end", {[0m
+[0m[[31merror[0m] [0m				                                          ^[0m
+[0m[[31merror[0m] [0m/home/christoph/Documents/dev/grapht/src/main/scala/re/toph/hybrid_db/EntryPoint.scala:180: value dist is not a member of Any[0m
+[0m[[31merror[0m] [0m				printf("Grapht	%d	%d	%d\n", end, res.dist, time.time)[0m
+[0m[[31merror[0m] [0m				              	  	  	                ^[0m
+[0m[[31merror[0m] [0m/home/christoph/Documents/dev/grapht/src/main/scala/re/toph/hybrid_db/EntryPoint.scala:180: value time is not a member of Any[0m
+[0m[[31merror[0m] [0m				printf("Grapht	%d	%d	%d\n", end, res.dist, time.time)[0m
+[0m[[31merror[0m] [0m				              	  	  	                           ^[0m
+[0m[[31merror[0m] [0m/home/christoph/Documents/dev/grapht/src/main/scala/re/toph/hybrid_db/EntryPoint.scala:181: type mismatch;[0m
+[0m[[31merror[0m] [0m found   : Unit[0m
+[0m[[31merror[0m] [0m required: Long[0m
+[0m[[31merror[0m] [0m				Timer.clearTimes()[0m
+[0m[[31merror[0m] [0m				                ^[0m
+[0m[[31merror[0m] [0m/home/christoph/Documents/dev/grapht/src/main/scala/re/toph/hybrid_db/EntryPoint.scala:202: type mismatch;[0m
+[0m[[31merror[0m] [0m found   : () => Long[0m
+[0m[[31merror[0m] [0m required: scala.collection.GenTraversableOnce[?][0m
+[0m[[31merror[0m] [0m					() => {[0m
+[0m[[31merror[0m] [0m					   ^[0m
+[0m[[31merror[0m] [0m/home/christoph/Documents/dev/grapht/src/main/scala/re/toph/hybrid_db/EntryPoint.scala:217: Nothing does not take parameters[0m
+[0m[[31merror[0m] [0m					f()[0m
+[0m[[31merror[0m] [0m					 ^[0m
+[0m[[31merror[0m] [0m22 errors found[0m
+[0m[[31merror[0m] [0m(compile:[31mcompileIncremental[0m) Compilation failed[0m
+[0m[[31merror[0m] [0mTotal time: 3 s, completed 22-May-2016 18:10:38[0m
