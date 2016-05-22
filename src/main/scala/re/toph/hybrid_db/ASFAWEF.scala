@@ -4,14 +4,19 @@ import java.util.{PriorityQueue, Comparator, HashMap}
 
 import java.sql.Connection
 
+trait GraphAdaptor[K,V,E] {
+  getVertex(k:K) :  V
+  getEdges(k:V) : List[E]
+  getLatLng(v:V) : (Long, Long)
+  getDist(e:E) : Long
+  getTarget(e:E) : K
+}
+
 /**
   * Created by christoph on 20/05/16.
   */
-class ASFAWEF(g : Graph)(implicit connection : Connection) {
+class ASFAWEF(g : GraphAdaptor[VertexKey,Vertex,Edge])(implicit connection : Connection) {
 
-  type VertexKey  = Long
-  type Vertex     = GraphNode
-  type EdgeKey    = Long
   case class PartResult(id: VertexKey, node: Vertex, dist: Double, priority:Double, from: PartResult)
 
   def getVertex(k : VertexKey): Vertex = {
@@ -19,34 +24,36 @@ class ASFAWEF(g : Graph)(implicit connection : Connection) {
   }
 
   def getEdges(k : Vertex): List[Edge] = {
-    k.edges
+    g.getEdges(k)
   }
+
 
   val RADIUS = 6371
   def heuristic(from:Vertex, to:Vertex) : Double =
   {
-    val (lat1, lng1, lat2, lng2) = (
-      Math.toRadians(from.properties("lat").asInstanceOf[Long]/1000000.0),
-      Math.toRadians(from.properties("lng").asInstanceOf[Long]/1000000.0),
-      Math.toRadians(to.properties("lat").asInstanceOf[Long]/1000000.0),
-      Math.toRadians(to.properties("lng").asInstanceOf[Long]/1000000.0))
+    val (lat1, lng1) = g.getLatLng(from)
+    val (lat2, lng2) = g.getLatLng(to)
+    val (lat1Rad, lng1Rad, lat2Rad, lng2Rad) = (
+      Math.toRadians(lat1/1000000.0),
+      Math.toRadians(lng1/1000000.0),
+      Math.toRadians(lat2/1000000.0),
+      Math.toRadians(lng1/1000000.0))
 
-    val cLa1 = Math.cos(lat1)
+    val cLa1 = Math.cos(lat1Rad)
     val A = (
-      RADIUS * cLa1 * Math.cos(lng1),
-      RADIUS * cLa1 * Math.sin(lng1),
-      RADIUS * cLa1 * Math.sin(lat1))
+      RADIUS * cLa1 * Math.cos(lng1Rad),
+      RADIUS * cLa1 * Math.sin(lng1Rad),
+      RADIUS * cLa1 * Math.sin(lat1Rad))
 
-    val cLa2 = Math.cos(lat2)
+    val cLa2 = Math.cos(lat2Rad)
     val B = (
-      RADIUS * cLa2 * Math.cos(lng2),
-      RADIUS * cLa2 * Math.sin(lng2),
-      RADIUS * cLa2 * Math.sin(lat2))
+      RADIUS * cLa2 * Math.cos(lng2Rad),
+      RADIUS * cLa2 * Math.sin(lng2Rad),
+      RADIUS * cLa2 * Math.sin(lat2Rad))
 
     val res = Math.sqrt((A._1 - B._1) * (A._1 - B._1) +
       (A._2 - B._2) * (A._2 - B._2) +
       (A._3 - B._3) * (A._3 - B._3))
-
 
     res
   }
@@ -76,14 +83,15 @@ class ASFAWEF(g : Graph)(implicit connection : Connection) {
 
   def find(start:VertexKey, end:VertexKey): PartResult = {
 
-    val goalNode = getVertex(end)
-    val openSet = new HashMap[Long, PartResult]()
-    val closedSet = new HashMap[Long, PartResult]()
+    val startVertex = g.getVertex(start)
+    val goalNode = g.getVertex(end)
+
+    val openSet = new HashMap[VertexKey, PartResult]()
+    val closedSet = new HashMap[VertexKey, PartResult]()
     val openQueue = new PriorityQueue[PartResult](new Comparator[PartResult](){
       override def compare(o1: PartResult, o2: PartResult): Int = o1.priority.compareTo(o2.priority)
     })
 
-    val startVertex = getVertex(start)
     val init = PartResult(start, startVertex, 0d, 0d, null)
     openQueue.add(init)
     openSet.put(start, init)
@@ -110,23 +118,26 @@ class ASFAWEF(g : Graph)(implicit connection : Connection) {
         return q}
 
       // get q's successors
-      vertex.edges.foreach(edge => {
+      val edges = g.getEdges(vertex)
+      edges.foreach(edge => {
 
-        if (closedSet.containsKey(edge.to)) {
+        val targetKey = g.getTarget(edge)
+
+        if (closedSet.containsKey(targetKey)) {
           // do nothing
         } else {
-          val targetNode = getVertex(edge.to)
-          val dist = q.dist + edge.properties("dist").asInstanceOf[Long]
+          val targetNode = g.getVertex(targetKey)
+          val dist = q.dist + g.getDist(edge)
           val priority = dist + 1000*heuristic(targetNode, goalNode)
-          val newPath = PartResult(edge.to, targetNode, dist, priority, q)
+          val newPath = PartResult(targetKey, targetNode, dist, priority, q)
 
-          if ( openSet.containsKey(edge.to)){
-            if (openSet.get(edge.to).priority > priority) {
-              openSet.put(edge.to, newPath)
+          if ( openSet.containsKey(targetKey)){
+            if (openSet.get(targetKey).priority > priority) {
+              openSet.put(targetKey, newPath)
               openQueue.add(newPath)
             }
           } else {
-            openSet.put(edge.to, newPath)
+            openSet.put(targetKey, newPath)
             openQueue.add(newPath)
           }
         }
