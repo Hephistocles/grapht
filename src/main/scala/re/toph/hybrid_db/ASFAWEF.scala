@@ -1,32 +1,61 @@
 package re.toph.hybrid_db
-
-import java.util.{PriorityQueue, Comparator, HashMap}
-
 import java.sql.Connection
+import java.util.{Comparator, HashMap, PriorityQueue}
+
+import org.neo4j.graphdb.{Direction, GraphDatabaseService, Node, Relationship}
+import re.toph.hybrid_db.Neo4JLoader.ROAD
+
+import scala.collection.JavaConverters._
 
 trait GraphAdaptor[K,V,E] {
-  getVertex(k:K) :  V
-  getEdges(k:V) : List[E]
-  getLatLng(v:V) : (Long, Long)
-  getDist(e:E) : Long
-  getTarget(e:E) : K
+  def getVertex(k:K) :  V
+  def start() : Unit = ()
+  def end() : Unit = ()
+  def getEdges(k:V) : Iterator[E]
+  def getLatLng(v:V) : (Long, Long)
+  def getDist(e:E) : Long
+  def getTarget(e:E) : V
+  def getKey(v:V) : K
+}
+
+class GraphtAdaptor(g:Graph)(implicit connection:Connection) extends GraphAdaptor[Long,GraphNode,Edge] {
+
+  override def getVertex(k: Long): GraphNode = g.getVertex(k)
+
+  override def getDist(e: Edge): Long = e.properties("dist").asInstanceOf[Long]
+
+  override def getLatLng(v: GraphNode): (Long, Long) = (v.properties("lat").asInstanceOf[Long], v.properties("lng").asInstanceOf[Long])
+
+  override def getEdges(k: GraphNode): Iterator[Edge] = k.edges.iterator
+
+  override def getTarget(e: Edge): GraphNode = getVertex(e.to)
+
+  override def getKey(v: GraphNode): Long = v.id
+}
+
+class NeoAdaptor()(implicit db: GraphDatabaseService) extends GraphAdaptor[Long, Node, Relationship] {
+
+  val index = db.index().forNodes("junctions")
+
+  override def getVertex(k: Long): Node = index.get("id", k).getSingle()
+
+  override def getDist(e: Relationship): Long = e.getProperty("distance").asInstanceOf[Long]
+
+  override def getLatLng(v: Node): (Long, Long) = (v.getProperty("lat").asInstanceOf[Long], v.getProperty("long").asInstanceOf[Long])
+
+  override def getEdges(k: Node): Iterator[Relationship] = k.getRelationships(ROAD, Direction.OUTGOING).iterator().asScala
+
+  override def getTarget(e: Relationship): Node = e.getEndNode()
+
+  override def getKey(v: Node): Long = v.getId()
 }
 
 /**
   * Created by christoph on 20/05/16.
   */
-class ASFAWEF(g : GraphAdaptor[VertexKey,Vertex,Edge])(implicit connection : Connection) {
+class ASFAWEF[VertexKey,Vertex,Edge](g : GraphAdaptor[VertexKey,Vertex,Edge])(implicit connection : Connection) {
 
   case class PartResult(id: VertexKey, node: Vertex, dist: Double, priority:Double, from: PartResult)
-
-  def getVertex(k : VertexKey): Vertex = {
-    g.getVertex(k)
-  }
-
-  def getEdges(k : Vertex): List[Edge] = {
-    g.getEdges(k)
-  }
-
 
   val RADIUS = 6371
   def heuristic(from:Vertex, to:Vertex) : Double =
@@ -57,31 +86,9 @@ class ASFAWEF(g : GraphAdaptor[VertexKey,Vertex,Edge])(implicit connection : Con
 
     res
   }
-//    // A*
-//    initialize the open list
-//      initialize the closed list
-//      put the starting node on the open list (you can leave its f at zero)
-//
-//  while the open list is not empty
-//    find the node with the least f on the open list, call it "q"
-//  pop q off the open list
-//    generate q's 8 successors and set their parents to q
-//  for each successor
-//  if successor is the goal, stop the search
-//  successor.g = q.g + distance between successor and q
-//  successor.h = distance from goal to successor
-//  successor.f = successor.g + successor.h
-//
-//  if a node with the same position as successor is in the OPEN list \
-//  which has a lower f than successor, skip this successor
-//  if a node with the same position as successor is in the CLOSED list \
-//  which has a lower f than successor, skip this successor
-//  otherwise, add the node to the open list
-//  end
-//  push q on the closed list
-//    end
-
   def find(start:VertexKey, end:VertexKey): PartResult = {
+
+//    var getCount = 0
 
     val startVertex = g.getVertex(start)
     val goalNode = g.getVertex(end)
@@ -105,28 +112,29 @@ class ASFAWEF(g : GraphAdaptor[VertexKey,Vertex,Edge])(implicit connection : Con
 //
 //    val openQueue = mutable.PriorityQueue[PartResult](openSet(start))
 
-    var popCount = 0
+//    var popCount = 0
     while (!openQueue.isEmpty()) {
       // pop most likely element
       val q = openQueue.poll()
-      popCount +=1
+//      popCount += 1
       val vertex = q.node
-      closedSet.put(vertex.id, q)
+      closedSet.put(g.getKey(vertex), q)
 //      closedSet += (q.id -> q)
 
       if (q.id == end) {
-        return q}
+        return q
+      }
 
       // get q's successors
       val edges = g.getEdges(vertex)
       edges.foreach(edge => {
 
-        val targetKey = g.getTarget(edge)
+        val targetNode : Vertex = g.getTarget(edge)
+        val targetKey = g.getKey(targetNode)
 
         if (closedSet.containsKey(targetKey)) {
           // do nothing
         } else {
-          val targetNode = g.getVertex(targetKey)
           val dist = q.dist + g.getDist(edge)
           val priority = dist + 1000*heuristic(targetNode, goalNode)
           val newPath = PartResult(targetKey, targetNode, dist, priority, q)

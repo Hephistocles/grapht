@@ -15,18 +15,18 @@ class LookaheadCTEPrefetcher(hops: Int = 3)(implicit connection: java.sql.Connec
 
     val sql = SQL(
       """
-        |WITH RECURSIVE ans (id1, id2, dist, lat, lng, hops) AS
-        |   (SELECT {id}::bigint, {id}::bigint, 0::bigint, lat, lng, 0 FROM points WHERE id={id}
+        |WITH RECURSIVE ans (eid, id1, id2, dist, lat, lng, hops) AS
+        |   (SELECT {id}::bigint, {id}::bigint, {id}::bigint, 0::bigint, lat, lng, 0 FROM points WHERE id={id}
         |
         |   UNION ALL
         |
-        |   SELECT ans.id2, edges.id2, edges.dist, points.lat, points.lng, ans.hops + 1 FROM
+        |   SELECT edges.id, ans.id2, edges.id2, edges.dist, points.lat, points.lng, ans.hops + 1 FROM
         |     ans JOIN
         |     edges ON ans.id2=edges.id1 JOIN
         |     points ON ans.id2=points.id
         |     WHERE ans.hops < {hops}
         |   )
-        |SELECT id1, id2, dist, id1 as id, lat, lng FROM ans WHERE hops > 0;
+        |SELECT DISTINCT eid, id1, id2, dist, id1 as id, lat, lng FROM ans WHERE hops > 0;
       """.stripMargin)
       .on("id"->k, "hops"->hops)
 

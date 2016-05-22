@@ -1,6 +1,5 @@
 out/
 target/
-lib/
 *.aux
 *.pyo
 *.exe
