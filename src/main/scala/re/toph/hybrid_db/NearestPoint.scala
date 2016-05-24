@@ -1,59 +1,12 @@
 package re.toph.hybrid_db
+
 import java.sql.Connection
+
 import java.util.{Comparator, HashMap, PriorityQueue}
-
-import org.neo4j.graphdb.{Direction, GraphDatabaseService, Node, Relationship}
-import re.toph.hybrid_db.Neo4JLoader.ROAD
-
-import scala.collection.JavaConverters._
-
-trait GraphAdaptor[K,V,E] {
-  def getVertex(k:K) :  V
-  def start() : Unit = ()
-  def end() : Unit = ()
-  def getEdges(k:V) : Iterator[E]
-  def getLatLng(v:V) : (Long, Long)
-  def getDist(e:E) : Long
-  def getTarget(e:E) : V
-  def getKey(v:V) : K
-}
-
-class GraphtAdaptor(g:Graph)(implicit connection:Connection) extends GraphAdaptor[Long,GraphNode,Edge] {
-
-  override def getVertex(k: Long): GraphNode = g.getVertex(k)
-
-  override def getDist(e: Edge): Long = e.properties("dist").asInstanceOf[Long]
-
-  override def getLatLng(v: GraphNode): (Long, Long) = (v.properties("lat").asInstanceOf[Long], v.properties("lng").asInstanceOf[Long])
-
-  override def getEdges(k: GraphNode): Iterator[Edge] = k.edges.iterator
-
-  override def getTarget(e: Edge): GraphNode = getVertex(e.to)
-
-  override def getKey(v: GraphNode): Long = v.id
-}
-
-class NeoAdaptor()(implicit db: GraphDatabaseService) extends GraphAdaptor[Long, Node, Relationship] {
-
-  val index = db.index().forNodes("junctions")
-
-  override def getVertex(k: Long): Node = index.get("id", k).getSingle()
-
-  override def getDist(e: Relationship): Long = e.getProperty("distance").asInstanceOf[Long]
-
-  override def getLatLng(v: Node): (Long, Long) = (v.getProperty("lat").asInstanceOf[Long], v.getProperty("long").asInstanceOf[Long])
-
-  override def getEdges(k: Node): Iterator[Relationship] = k.getRelationships(ROAD, Direction.OUTGOING).iterator().asScala
-
-  override def getTarget(e: Relationship): Node = e.getEndNode()
-
-  override def getKey(v: Node): Long = v.getId()
-}
-
 /**
   * Created by christoph on 20/05/16.
   */
-class ASFAWEF[VertexKey,Vertex,Edge](g : GraphAdaptor[VertexKey,Vertex,Edge])(implicit connection : Connection) {
+class NearestPoint[VertexKey,Vertex,Edge](g : GraphAdaptor[VertexKey,Vertex,Edge])(implicit connection : Connection) {
 
   case class PartResult(id: VertexKey, node: Vertex, dist: Double, priority:Double, from: PartResult)
 
