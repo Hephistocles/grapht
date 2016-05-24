@@ -67,7 +67,8 @@ object EntryPoint {
 //			graphTest()
 //			relaTest()
 //			hybridTest()
-			threeSumTest()
+//			threeSumTest()
+			colinear()
 		} catch {
 			case e: Throwable => e.printStackTrace()
 		} finally {
@@ -311,6 +312,153 @@ object EntryPoint {
 
 
 
+	def colinear()(implicit connection:Connection) : Unit = {
+
+		def psql(minLat:Long, maxLat:Long, minLong:Long, maxLong:Long)(implicit db : GraphDatabaseService) : Unit = {
+
+			val tx = db.beginTx()
+			try {
+				val (time, res) = Timer.timeWithResult(s"Grapht", {
+					SQL(
+						"""
+							|WITH test
+							|AS (
+							|	SELECT *
+							|		FROM points
+							| 	WHERE
+							|  		{minLat} < lat AND lat < {maxLat} AND
+							|    {minLong} < lng AND lng < {maxLong}
+							|)
+              | SELECT a.id, b.id, c.id
+              | FROM test a, test b, test c
+              | WHERE (b.lng-a.lng)*(c.lat-b.lat) = (c.lng-b.lng)*(b.lat-a.lat)
+              | 	AND a.id<>b.id AND a.id<>c.id AND b.id<>c.id AND a.id < b.id AND b.id < c.id""".stripMargin)
+						.on("minLat"->minLat, "minLong" -> minLong, "maxLat" -> maxLat, "maxLong" -> maxLong)()
+						//						.map( r => {
+						//							val r1 = r[List[Int]]("matches")
+						//							r1
+						//						})
+						.length
+				})
+				printf("Grapht\t%d,%d,%d,%d\t%d\t%d\n", minLat, minLong, maxLat, maxLong, res, time.time)
+				printf("PostgreSQL\t%d,%d,%d,%d\t%d\t%d\n", minLat, minLong, maxLat, maxLong, res, time.time)
+				Timer.clearTimes()
+			} finally {
+				tx.close()
+			}
+		}
+
+		def neo2(minLat:Long, maxLat:Long, minLong:Long, maxLong:Long)(implicit db : GraphDatabaseService) : Unit = {
+			val tx = db.beginTx()
+			try {
+				val (time, res) = Timer.timeWithResult(s"Neo4J", {
+
+					val label: Label = Label.label("midset")
+
+					// part one - identify geographically local points
+					val nodeList = ListBuffer[Node]()
+					db.getAllNodes.asScala.foreach(n => {
+						if (minLat < n.getProperty("lat").asInstanceOf[Long] && n.getProperty("lat").asInstanceOf[Long] < minLong
+							&& minLong < n.getProperty("long").asInstanceOf[Long] && n.getProperty("long").asInstanceOf[Long] < maxLong) {
+
+							nodeList += n
+						}
+					})
+
+					// part two (not performed within Neo) - find threesum triples!
+					val edgeListFinal = nodeList.toList
+					var count = 0
+					for (a <- edgeListFinal) {
+						for (b <- edgeListFinal) {
+							for (c <- edgeListFinal) {
+								// (n−b)(x−m)=(y−n)(m−a)
+								if (((b.getProperty("long").asInstanceOf[Long] - a.getProperty("long").asInstanceOf[Long]) *
+									(c.getProperty("lat").asInstanceOf[Long] - b.getProperty("lat").asInstanceOf[Long])
+									==
+									(c.getProperty("long").asInstanceOf[Long] - b.getProperty("long").asInstanceOf[Long]) *
+										(b.getProperty("lat").asInstanceOf[Long] - a.getProperty("lat").asInstanceOf[Long])) &&
+									a.getId != b.getId() && a.getId() != c.getId() && b.getId() != c.getId() && a.getId() < b.getId() && b.getId() < c.getId()
+								){
+									count += 1
+								}
+							}
+						}
+					}
+
+					count
+				})
+				printf("Neo4J\t%d,%d,%d,%d\t%d\t%d\n", minLat, minLong, maxLat, maxLong, res, time.time)
+				Timer.clearTimes()
+			} finally {
+				tx.close()
+			}
+		}
+
+		// labelled version - commented out because I can't apply labels to edges!
+
+
+
+		//		def neo(minLat:Long, maxLat:Long, minLong:Long, maxLong:Long)(implicit db : GraphDatabaseService) : Unit = {
+		//			val tx = db.beginTx()
+		//			try {
+		//				val (time, res) = Timer.timeWithResult(s"Neo4J", {
+		//
+		//					val label: Label = Label.label("midset")
+		//
+		//					// part one - identify geographically local points
+		//					db.getAllNodes.asScala.foreach(n => {
+		//						if (minLat < n.getProperty("lat").asInstanceOf[Long] && n.getProperty("lat").asInstanceOf[Long] < maxLat
+		//							&& minLong < n.getProperty("long").asInstanceOf[Long] && n.getProperty("long").asInstanceOf[Long] < maxLong) {
+		//							// apply label  to edges so we can find it again
+		//							n.getRelationships(ROAD, Direction.OUTGOING).asScala.foreach(r => r.addLabel(label))
+		//						}
+		//					})
+		//
+		//
+		//					// part two - group by substring (and remove label)
+		//					var group = Map[String, ListBuffer[Long]]()
+		//					db.findNodes(label).asScala.foreach(n=> {
+		//						val key = n.getProperty("payload").asInstanceOf[String].substring(0,2)
+		//						if (group.contains(key)) group(key) += n.getId
+		//						else group += key -> ListBuffer[Long](n.getId())
+		//						n.removeLabel(label)
+		//					})
+		//
+		//					// part three (not performed within Neo) - find groups with several entries
+		//					var finals = ListBuffer[List[Long]]()
+		//					for ((key, ids) <- group) {
+		//						if (ids.length > 1) finals += ids.toList
+		//					}
+		//
+		//					finals.toList
+		//				})
+		//				printf("Neo4J1\t%d,%d,%d,%d\t%d\t%d\n", minLat, minLong, maxLat, maxLong, res.length, time.time)
+		//				Timer.clearTimes()
+		//			} finally {
+		//				tx.close()
+		//			}
+		//		}
+
+
+		val bounds = List(
+			((-74450000, -73500010), (40301000,40301500))
+		)
+
+		println("Engine\tbounds\tresults\ttime")
+		for (_ <- 1 to 10) {
+			bounds.foreach {
+				case ((minLat, maxLat), (minLng, maxLng)) =>
+					System.gc()
+					neo2(minLat, maxLat, minLng, maxLng)
+					//					System.gc()
+					//					neo(minLat, maxLat, minLng, maxLng, 5534)
+					System.gc()
+					psql(minLat, maxLat, minLng, maxLng)
+				//					grapht(start, end)
+				//					System.gc()
+			}
+		}
+	}
 
 	def threeSumTest()(implicit connection:Connection) : Unit = {
 
