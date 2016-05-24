@@ -5,11 +5,12 @@ import java.sql.{Connection, DriverManager}
 
 import anorm.SQL
 import org.anormcypher._
-import org.neo4j.graphalgo.{CommonEvaluators, EstimateEvaluator, GraphAlgoFactory}
 import org.neo4j.graphdb._
 import org.neo4j.graphdb.factory.GraphDatabaseFactory
 import play.api.libs.ws._
-import re.toph.hybrid_db.Neo4JLoader.ROAD
+
+import scala.collection.JavaConverters._
+import scala.collection.mutable.ListBuffer
 
 /**
 	* Created by christoph on 28/04/16.
@@ -62,7 +63,9 @@ object EntryPoint {
 //			Timer.clearTimes()
 
 			// prefetcherTest()
-			graphTest()
+//			graphTest()
+//			relaTest()
+			hybridTest()
 		} catch {
 			case e: Throwable => e.printStackTrace()
 		} finally {
@@ -72,6 +75,33 @@ object EntryPoint {
 
 	}
 
+	val RADIUS = 6371
+	def latlngdist(latitude1:Long, longitude1:Long, latitude2:Long, longitude2:Long ) : Double =
+	{
+		val (lat1, lng1, lat2, lng2) = (
+			Math.toRadians(latitude1/1000000.0),
+			Math.toRadians(longitude1/1000000.0),
+			Math.toRadians(latitude2/1000000.0),
+			Math.toRadians(longitude2/1000000.0))
+
+		val cLa1 = Math.cos(lat1)
+		val A = (
+			RADIUS * cLa1 * Math.cos(lng1),
+			RADIUS * cLa1 * Math.sin(lng1),
+			RADIUS * cLa1 * Math.sin(lat1))
+
+		val cLa2 = Math.cos(lat2)
+		val B = (
+			RADIUS * cLa2 * Math.cos(lng2),
+			RADIUS * cLa2 * Math.sin(lng2),
+			RADIUS * cLa2 * Math.sin(lat2))
+
+		val res = Math.sqrt((A._1 - B._1) * (A._1 - B._1) +
+			(A._2 - B._2) * (A._2 - B._2) +
+			(A._3 - B._3) * (A._3 - B._3))
+
+		res
+	}
 
 	def prefetcherTest(): Unit = {
 
@@ -108,7 +138,7 @@ object EntryPoint {
 									// now would be a good time to GC. During the test, not so much.
 									val g = new Graph(new LookaheadMultiPrefetcher(50))
 									val adaptor = new GraphtAdaptor(g)
-									val astar = new ASFAWEF(adaptor)
+									val astar = new AStarCalculator(adaptor)
 									System.gc()
 									val (time, _) = Timer.timeWithResult(s"$name,$start,$end", {
 										astar.find(start, end)
@@ -141,73 +171,282 @@ object EntryPoint {
 
 
 
+	def hybridTest()(implicit connection:Connection) : Unit = {
 
+		def grapht(minLat:Long, maxLat:Long, minLong:Long, maxLong:Long)(implicit db : GraphDatabaseService) : Unit = {
+			val adaptor = new GraphtAdaptor(new Graph(new LookaheadMultiPrefetcher(40)))
+			val astar = new AStarCalculator(adaptor)
 
-	def graphTest()(implicit  connection:Connection): Unit = {
+			Timer.clearTimes()
+				val (time, res) = Timer.timeWithResult(s"Grapht", {
+					val points = SQL(
+						"""
+							|WITH test
+							|AS (
+							|	SELECT * FROM points
+							| 	WHERE
+							|  		{minLat} < lat AND lat < {maxLat} AND
+							|    {minLong} < lng AND lng < {maxLong}
+							|)
+							|	 SELECT
+							|  		array_agg(id) matches
+							|  FROM test
+							|  GROUP BY substr(payload,1,2)
+							|  HAVING count(*)>1;""".stripMargin)
+						.on("minLat"->minLat, "minLong" -> minLong, "maxLat" -> maxLat, "maxLong" -> maxLong)()
+						.map( r => {
+							val r1 = r[List[Int]]("matches")
+							r1
+						})
+					.head
 
-		val RADIUS = 6371
-		def heuristic(latitude1:Long, longitude1:Long, latitude2:Long, longitude2:Long ) : Double =
-		{
-			val (lat1, lng1, lat2, lng2) = (
-				Math.toRadians(latitude1/1000000.0),
-				Math.toRadians(longitude1/1000000.0),
-				Math.toRadians(latitude2/1000000.0),
-				Math.toRadians(longitude2/1000000.0))
+					astar.find(points(0), points(1))
 
-			val cLa1 = Math.cos(lat1)
-			val A = (
-				RADIUS * cLa1 * Math.cos(lng1),
-				RADIUS * cLa1 * Math.sin(lng1),
-				RADIUS * cLa1 * Math.sin(lat1))
-
-			val cLa2 = Math.cos(lat2)
-			val B = (
-				RADIUS * cLa2 * Math.cos(lng2),
-				RADIUS * cLa2 * Math.sin(lng2),
-				RADIUS * cLa2 * Math.sin(lat2))
-
-			val res = Math.sqrt((A._1 - B._1) * (A._1 - B._1) +
-				(A._2 - B._2) * (A._2 - B._2) +
-				(A._3 - B._3) * (A._3 - B._3))
-
-			res
+				})
+				printf("Grapht\t%d,%d,%d,%d\t%d\t%d\n", minLat, minLong, maxLat, maxLong, res.dist.toLong, time.time)
+				Timer.clearTimes()
 		}
-
-		def neo(from:Long, to:Long)(implicit db : GraphDatabaseService): Unit = {
+		def neo2(minLat:Long, maxLat:Long, minLong:Long, maxLong:Long)(implicit db : GraphDatabaseService) : Unit = {
 			val tx = db.beginTx()
 			try {
+				val adaptor = new NeoAdaptor()(db)
+				val astar = new AStarCalculator(adaptor)
+				val (time, res) = Timer.timeWithResult(s"Neo4J", {
 
-				val junctionIndex =	db.index().forNodes("junctions")
-				val start = junctionIndex.get("id", from).getSingle()
-				val end = junctionIndex.get("id", to).getSingle()
+					val label: Label = Label.label("midset")
 
-				val (time, path) = Timer.timeWithResult(s"Neo$from,$to", {
-						GraphAlgoFactory.aStar(
-						PathExpanders.forTypeAndDirection(ROAD, Direction.OUTGOING),
-						CommonEvaluators.doubleCostEvaluator("distance"),
-						new EstimateEvaluator[java.lang.Double] {
-							override def getCost(node1: Node, node2: Node): java.lang.Double = heuristic(
-								node1.getProperty("lat").asInstanceOf[Long],
-								node1.getProperty("long").asInstanceOf[Long],
-								node2.getProperty("lat").asInstanceOf[Long],
-								node2.getProperty("long").asInstanceOf[Long]
-							)
+					// part one - identify geographically local points
+					var group = Map[String, ListBuffer[Long]]()
+					db.getAllNodes.asScala.foreach(n => {
+						if (minLat < n.getProperty("lat").asInstanceOf[Long] && n.getProperty("lat").asInstanceOf[Long] < minLong
+							&& minLong < n.getProperty("long").asInstanceOf[Long] && n.getProperty("long").asInstanceOf[Long] < maxLong) {
+							val key = n.getProperty("payload").asInstanceOf[String].substring(0,2)
+							if (group.contains(key)) group(key) += n.getId
+							else group += key -> ListBuffer[Long](n.getId())
 						}
-					).findSinglePath(start, end)
-				})
+					})
 
-				printf("Neo4J 	%d	%d	%d\n", to, path.weight().toLong, time.time)
+					// part three (not performed within Neo) - find groups with several entries
+					var finals = ListBuffer[List[Long]]()
+					for ((key, ids) <- group) {
+						if (ids.length > 1) finals += ids.toList
+					}
+
+					finals.toList
+
+						astar.find(finals.head(0), finals.head(1))
+				})
+				printf("Neo4J\t%d,%d,%d,%d\t%d\t%d\n", minLat, minLong, maxLat, maxLong, res.dist.toLong, time.time)
+				Timer.clearTimes()
+			} finally {
+				tx.close()
+			}
+		}
+		def neo(minLat:Long, maxLat:Long, minLong:Long, maxLong:Long)(implicit db : GraphDatabaseService) : Unit = {
+			val tx = db.beginTx()
+			try {
+				val adaptor = new GraphtAdaptor(new Graph(new LookaheadMultiPrefetcher(50)))
+				val astar = new AStarCalculator(adaptor)
+				val (time, res) = Timer.timeWithResult(s"Neo4J", {
+
+					val label: Label = Label.label("midset")
+
+					// part one - identify geographically local points
+					db.getAllNodes.asScala.foreach(n => {
+						if (minLat < n.getProperty("lat").asInstanceOf[Long] && n.getProperty("lat").asInstanceOf[Long] < maxLat
+							&& minLong < n.getProperty("long").asInstanceOf[Long] && n.getProperty("long").asInstanceOf[Long] < maxLong) {
+							// apply label so we can find it again
+							n.addLabel(label)
+						}
+					})
+
+
+					// part two - group by substring (and remove label)
+					var group = Map[String, ListBuffer[Long]]()
+					db.findNodes(label).asScala.foreach(n=> {
+						val key = n.getProperty("payload").asInstanceOf[String].substring(0,2)
+						if (group.contains(key)) group(key) += n.getId
+						else group += key -> ListBuffer[Long](n.getId())
+						n.removeLabel(label)
+					})
+
+					// part three (not performed within Neo) - find groups with several entries
+					var finals = ListBuffer[List[Long]]()
+					for ((key, ids) <- group) {
+						if (ids.length > 1) finals += ids.toList
+					}
+
+					finals.toList
+						astar.find(finals.head(0), finals.head(1))
+				})
+				printf("Neo4J1\t%d,%d,%d,%d\t%d\t%d\n", minLat, minLong, maxLat, maxLong, res.dist.toLong, time.time)
 				Timer.clearTimes()
 			} finally {
 				tx.close()
 			}
 		}
 
+
+		val bounds = List(
+			((-74450000, -73500010), (40301000,40301500))
+		)
+
+		println("Engine\tbounds\tresults\ttime")
+		for (_ <- 1 to 10) {
+			bounds.foreach {
+				case ((minLat, maxLat), (minLng, maxLng)) =>
+					System.gc()
+					neo2(minLat, maxLat, minLng, maxLng)
+					System.gc()
+					neo(minLat, maxLat, minLng, maxLng)
+					System.gc()
+					grapht(minLat, maxLat, minLng, maxLng)
+				//					grapht(start, end)
+				//					System.gc()
+			}
+		}
+	}
+
+
+
+
+	def relaTest()(implicit connection:Connection) : Unit = {
+
+		def psql(minLat:Long, maxLat:Long, minLong:Long, maxLong:Long)(implicit db : GraphDatabaseService) : Unit = {
+
+			val tx = db.beginTx()
+			try {
+				val (time, res) = Timer.timeWithResult(s"Grapht", {
+					SQL(
+            """
+              |WITH test
+              |AS (
+              |	SELECT * FROM points
+              | 	WHERE
+              |  		{minLat} < lat AND lat < {maxLat} AND
+              |    {minLong} < lng AND lng < {maxLong}
+              |)
+              |	 SELECT
+              |  		array_agg(id) matches
+              |  FROM test
+              |  GROUP BY substr(payload,1,2)
+              |  HAVING count(*)>1;""".stripMargin)
+						.on("minLat"->minLat, "minLong" -> minLong, "maxLat" -> maxLat, "maxLong" -> maxLong)()
+						.map( r => {
+								val r1 = r[List[Int]]("matches")
+							r1
+						})
+				})
+				printf("Grapht\t%d,%d,%d,%d\t%d\t%d\n", minLat, minLong, maxLat, maxLong, res.length, time.time)
+				printf("PSQL\t%d,%d,%d,%d\t%d\t%d\n", minLat, minLong, maxLat, maxLong, res.length, time.time)
+				Timer.clearTimes()
+			} finally {
+				tx.close()
+			}
+		}
+		def neo2(minLat:Long, maxLat:Long, minLong:Long, maxLong:Long)(implicit db : GraphDatabaseService) : Unit = {
+			val tx = db.beginTx()
+			try {
+				val (time, res) = Timer.timeWithResult(s"Neo4J", {
+
+					val label: Label = Label.label("midset")
+
+					// part one - identify geographically local points
+					var group = Map[String, ListBuffer[Long]]()
+					db.getAllNodes.asScala.foreach(n => {
+						if (minLat < n.getProperty("lat").asInstanceOf[Long] && n.getProperty("lat").asInstanceOf[Long] < minLong
+							&& minLong < n.getProperty("long").asInstanceOf[Long] && n.getProperty("long").asInstanceOf[Long] < maxLong) {
+							val key = n.getProperty("payload").asInstanceOf[String].substring(0,2)
+							if (group.contains(key)) group(key) += n.getId
+							else group += key -> ListBuffer[Long](n.getId())
+						}
+					})
+
+					// part three (not performed within Neo) - find groups with several entries
+					var finals = ListBuffer[List[Long]]()
+					for ((key, ids) <- group) {
+						if (ids.length > 1) finals += ids.toList
+					}
+
+					finals.toList
+				})
+				printf("Neo4J\t%d,%d,%d,%d\t%d\t%d\n", minLat, minLong, maxLat, maxLong, res.length, time.time)
+				Timer.clearTimes()
+			} finally {
+				tx.close()
+			}
+		}
+		def neo(minLat:Long, maxLat:Long, minLong:Long, maxLong:Long)(implicit db : GraphDatabaseService) : Unit = {
+			val tx = db.beginTx()
+			try {
+				val (time, res) = Timer.timeWithResult(s"Neo4J", {
+
+					val label: Label = Label.label("midset")
+
+					// part one - identify geographically local points
+					db.getAllNodes.asScala.foreach(n => {
+					if (minLat < n.getProperty("lat").asInstanceOf[Long] && n.getProperty("lat").asInstanceOf[Long] < maxLat
+						&& minLong < n.getProperty("long").asInstanceOf[Long] && n.getProperty("long").asInstanceOf[Long] < maxLong) {
+						// apply label so we can find it again
+							n.addLabel(label)
+						}
+					})
+
+
+					// part two - group by substring (and remove label)
+					var group = Map[String, ListBuffer[Long]]()
+					db.findNodes(label).asScala.foreach(n=> {
+						val key = n.getProperty("payload").asInstanceOf[String].substring(0,2)
+						if (group.contains(key)) group(key) += n.getId
+						else group += key -> ListBuffer[Long](n.getId())
+						n.removeLabel(label)
+					})
+
+					// part three (not performed within Neo) - find groups with several entries
+					var finals = ListBuffer[List[Long]]()
+					for ((key, ids) <- group) {
+						if (ids.length > 1) finals += ids.toList
+					}
+
+					finals.toList
+				})
+				printf("Neo4J1\t%d,%d,%d,%d\t%d\t%d\n", minLat, minLong, maxLat, maxLong, res.length, time.time)
+				Timer.clearTimes()
+			} finally {
+				tx.close()
+			}
+		}
+
+
+		val bounds = List(
+			((-74450000, -73500010), (40301000,40301500))
+		)
+
+		println("Engine\tbounds\tresults\ttime")
+		for (_ <- 1 to 10) {
+			bounds.foreach {
+				case ((minLat, maxLat), (minLng, maxLng)) =>
+					System.gc()
+					neo2(minLat, maxLat, minLng, maxLng)
+					System.gc()
+					neo(minLat, maxLat, minLng, maxLng)
+					System.gc()
+					psql(minLat, maxLat, minLng, maxLng)
+//					grapht(start, end)
+//					System.gc()
+			}
+		}
+	}
+
+
+
+	def graphTest()(implicit  connection:Connection): Unit = {
+
 		def neo2(start:Long, end:Long)(implicit db : GraphDatabaseService) : Unit = {
 			val tx = db.beginTx()
 			try {
         val adaptor = new NeoAdaptor()(db)
-        val astar = new ASFAWEF(adaptor)
+        val astar = new AStarCalculator(adaptor)
         val (time, res) = Timer.timeWithResult(s"Grapht,$start,$end", {
           astar.find(start, end)
         })
@@ -219,7 +458,7 @@ object EntryPoint {
 		}
 		def grapht(start:Long, end:Long) : Unit = {
 			val adaptor = new GraphtAdaptor(new Graph(new LookaheadMultiPrefetcher(50)))
-			val astar = new ASFAWEF(adaptor)
+			val astar = new AStarCalculator(adaptor)
 			val (time, res) = Timer.timeWithResult(s"Grapht,$start,$end", {
 				astar.find(start, end)
 			})
@@ -228,7 +467,7 @@ object EntryPoint {
 		}
 		def psql2(start:Long, end:Long) : Unit = {
 			val adaptor = new GraphtAdaptor(new Graph(new NullPrefetcher()))
-			val astar = new ASFAWEF(adaptor)
+			val astar = new AStarCalculator(adaptor)
 			val (time, res) = Timer.timeWithResult(s"Grapht,$start,$end", {
 				astar.find(start, end)
 			})
