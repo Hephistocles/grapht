@@ -6,6 +6,7 @@ import org.neo4j.graphdb.{Direction, GraphDatabaseService, Node, Relationship}
 import re.toph.hybrid_db.Neo4JLoader.ROAD
 
 import scala.collection.JavaConverters._
+import scala.collection.mutable.ListBuffer
 
 trait GraphAdaptor[K,V,E] {
   def getVertex(k:K) :  V
@@ -47,7 +48,7 @@ class NeoAdaptor()(implicit db: GraphDatabaseService) extends GraphAdaptor[Long,
 
   override def getTarget(e: Relationship): Node = e.getEndNode()
 
-  override def getKey(v: Node): Long = v.getId()
+  override def getKey(v: Node): Long = v.getProperty("id").asInstanceOf[Long]
 }
 
 /**
@@ -86,7 +87,21 @@ class AStarCalculator[VertexKey,Vertex,Edge](g : GraphAdaptor[VertexKey,Vertex,E
 
     res
   }
-  def find(start:VertexKey, end:VertexKey): PartResult = {
+
+  case class Path(dist:Double, length:Int, vertices:List[VertexKey])
+  def makeList(p:PartResult): Path = {
+    val keys = ListBuffer[VertexKey]()
+    var current = p
+    var count = -1 // because there is one fewer hop than nodes
+    while (current != null) {
+      keys += current.id
+      current = current.from
+      count += 1
+    }
+    Path(p.dist, count, keys.toList.reverse)
+  }
+
+  def find(start:VertexKey, end:VertexKey): Path = {
 
 //    var getCount = 0
 
@@ -122,7 +137,7 @@ class AStarCalculator[VertexKey,Vertex,Edge](g : GraphAdaptor[VertexKey,Vertex,E
 //      closedSet += (q.id -> q)
 
       if (q.id == end) {
-        return q
+        return makeList(q)
       }
 
       // get q's successors

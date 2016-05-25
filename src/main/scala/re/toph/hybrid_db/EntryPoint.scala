@@ -64,8 +64,8 @@ object EntryPoint {
 //			Timer.clearTimes()
 
 //			AStar.get100(new LookaheadMultiPrefetcher(50))
-			// prefetcherTest()
-			graphTest()
+			 prefetcherTest()
+//			graphTest()
 //			relaTest()
 //			hybridTest()
 //			threeSumTest()
@@ -114,23 +114,34 @@ object EntryPoint {
 		val prefetchers =
 			(1 to 10)
 				.map(b => (s"CTE Lookahead", b, new LookaheadCTEPrefetcher(b))) ++
-			(1 to 100 by 10)
+			(1 to 150 by 15)
 					.map(b => (s"Lookahead", b, new LookaheadMultiPrefetcher(b))) ++
 			List(("Null Prefetcher", 0, new NullPrefetcher())) ++
-			List(1,10,50,100,250,500,1000,5000,10000,20000)
+			List(1,10,50,100,250,500,1000,5000,10000,20000, 50000, 100000)
 					.map(b => (s"Block", b, new LookaheadBlockPrefetcher(b)))
 
-		val routes = List(
-			(1, 50),
-			(171677, 164352),
-			(132308, 20756),
-			(70188, 151443),
-			(54469, 231496),
-			(66089, 30814),
-			(176648, 126808),
-			(58197, 4362)
-		)
-	.drop(2)
+
+    val tx = graphDb.beginTx()
+    var routes = List[(Long, Long)]()
+    try {
+      routes = AStar.findRoutes(50,60)
+        .take(3)
+        .toList
+    } finally {
+      tx.close()
+    }
+
+//  val routes = List(
+//			(1, 50),
+//			(171677, 164352),
+//			(132308, 20756),
+//			(70188, 151443),
+//			(54469, 231496),
+//			(66089, 30814),
+//			(176648, 126808),
+//			(58197, 4362)
+//		)
+//	.drop(2)
 		// .take(1)
 
 		val tests =
@@ -160,7 +171,7 @@ object EntryPoint {
 		// println("Prefetcher	Size	Start	End	Vertices Requested	Vertices Evicted	Cache Hits	Cache Misses	Total Runtime	Total DB time	DB calls")
 
 		// assuming 10 iterations
-		for (_ <- 1 to 1) {
+		for (_ <- 1 to 3) {
 			tests.foreach (f =>{
 		
 				if (skipFromStart > 0) {
@@ -752,7 +763,7 @@ object EntryPoint {
         val (time, res) = Timer.timeWithResult(s"Grapht,$start,$end", {
           astar.find(start, end)
         })
-        printf("neo2	%d	%d	%.3f\n", end, res.dist.toLong, time.time/1.0e9)
+        printf("neo2	%d	%d	%d	%.3f\n", end, res.dist.toLong,res.length, time.time/1.0e9)
         Timer.clearTimes()
 			} finally {
 				tx.close()
@@ -764,7 +775,7 @@ object EntryPoint {
 			val (time, res) = Timer.timeWithResult(s"Grapht,$start,$end", {
 				astar.find(start, end)
 			})
-			printf("Grapht	%d	%d	%.3f\n", end, res.dist.toLong, time.time/1.0e9)
+			printf("Grapht	%d	%d	%d	%.3f\n", end, res.dist.toLong, res.length, time.time/1.0e9)
 			Timer.clearTimes()
 		}
 		def psql2(start:Long, end:Long) : Unit = {
@@ -790,27 +801,27 @@ object EntryPoint {
 
 
 
-		val tx = graphDb.beginTx()
-		var routes = List[(Long, Long)]()
-		try {
-			routes = AStar.findRoutes(50,60)
-				.take(4)
-				.toList
-		} finally {
-			tx.close()
-		}
-		println(routes)
+//		val tx = graphDb.beginTx()
+//		var routes = List[(Long, Long)]()
+//		try {
+//			routes = AStar.findRoutes(50,60)
+//				.take(10)
+//				.toList
+//		} finally {
+//			tx.close()
+//		}
+//		println(routes)
 
-//		val routes = List(
-//			(1, 50),
-//			(171677, 164352),
-//			(132308, 20756),
-//			(70188, 151443),
-//			(54469, 231496),
-//			(66089, 30814),
-//			(176648, 126808),
-//			(58197, 4362)
-//		).take(4)
+		val routes = List(
+			(1, 50),
+			(171677, 164352),
+			(132308, 20756),
+			(70188, 151443),
+			(54469, 231496),
+			(66089, 30814),
+			(176648, 126808),
+			(58197, 4362)
+		).take(4)
 
 		routes.foreach {
 			case (start, end) =>

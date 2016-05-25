@@ -53,6 +53,7 @@ package object AStar extends BenchmarkTest {
     val tx = db.beginTx()
     try {
 
+      val index = db.index().forNodes("junctions")
       val myTraversal = db.traversalDescription()
         .depthFirst()
         .relationships( ROAD, Direction.OUTGOING)
@@ -61,7 +62,7 @@ package object AStar extends BenchmarkTest {
       Stream.from(0).
         map(_ => {
           val startPoint = Math.floor(Math.random() * 264346L).asInstanceOf[Long]
-          val startNode = db.getNodeById(startPoint)
+          val startNode = index.get("id", startPoint).getSingle()
           myTraversal.traverse(startNode).asScala.head
         })
         .map(p => {
@@ -80,8 +81,8 @@ package object AStar extends BenchmarkTest {
           })
         .filter(p => p.length() > lim1 && p.length < lim2)
         .map(p => {
-          println(p.startNode.getId + "-" + p.length + "->" + p.endNode.getId)
-          (p.startNode.getId, p.endNode.getId)
+          println(p.startNode.getProperty("id").toString + "-" + p.length + "->" + p.endNode.getProperty("id").toString)
+          (p.startNode.getProperty("id").asInstanceOf[Long], p.endNode.getProperty("id").asInstanceOf[Long])
         })
 
     } finally {
