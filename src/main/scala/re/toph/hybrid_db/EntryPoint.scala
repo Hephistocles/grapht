@@ -63,12 +63,13 @@ object EntryPoint {
 //			Timer.printResults(depth=2)
 //			Timer.clearTimes()
 
+//			AStar.get100(new LookaheadMultiPrefetcher(50))
 			// prefetcherTest()
-//			graphTest()
+			graphTest()
 //			relaTest()
 //			hybridTest()
 //			threeSumTest()
-			colinear()
+//			colinear()
 		} catch {
 			case e: Throwable => e.printStackTrace()
 		} finally {
@@ -182,31 +183,33 @@ object EntryPoint {
 
 			Timer.clearTimes()
 				val (time, res) = Timer.timeWithResult(s"Grapht", {
-					val points = SQL(
-						"""
-							|WITH test
-							|AS (
-							|	SELECT * FROM points
-							| 	WHERE
-							|  		{minLat} < lat AND lat < {maxLat} AND
-							|    {minLong} < lng AND lng < {maxLong}
-							|)
-							|	 SELECT
-							|  		array_agg(id) matches
-							|  FROM test
-							|  GROUP BY substr(payload,1,2)
-							|  HAVING count(*)>1;""".stripMargin)
-						.on("minLat"->minLat, "minLong" -> minLong, "maxLat" -> maxLat, "maxLong" -> maxLong)()
-						.map( r => {
-							val r1 = r[List[Int]]("matches")
-							r1
-						})
-					.head
 
-					astar.find(points(0), points(1))
+					val points = Timer.time("relational", { SQL(
+						"""
+            	|WITH test
+              |AS (
+              |	SELECT *
+              |		FROM points
+              | 	WHERE
+              |  		{minLat} < lat AND lat < {maxLat} AND
+              |    {minLong} < lng AND lng < {maxLong}
+              |)
+							| SELECT a.id, b.id, c.id
+							| FROM test a, test b, test c
+							| WHERE (b.lng-a.lng)*(c.lat-b.lat) = (c.lng-b.lng)*(b.lat-a.lat)
+							| 	AND a.id < b.id AND b.id < c.id""".stripMargin)
+						.on("minLat"->minLat, "minLong" -> minLong, "maxLat" -> maxLat, "maxLong" -> maxLong)()
+						.map( row => {
+							val r =  row.asList
+							(r(0).asInstanceOf[Long], r(1).asInstanceOf[Long], r(2).asInstanceOf[Long])
+						})
+					.head})
+
+					Timer.time("graph", astar.find(points._1, points._2))
 
 				})
-				printf("Grapht\t%d,%d,%d,%d\t%d\t%d\n", minLat, minLong, maxLat, maxLong, res.dist.toLong, time.time)
+//				printf("Grapht\t%d,%d,%d,%d\t%d\t%d\n", minLat, minLong, maxLat, maxLong, res.dist.toLong, time.time)
+				Timer.printResults()
 				Timer.clearTimes()
 		}
 		def neo2(minLat:Long, maxLat:Long, minLong:Long, maxLong:Long)(implicit db : GraphDatabaseService) : Unit = {
@@ -216,30 +219,33 @@ object EntryPoint {
 				val astar = new AStarCalculator(adaptor)
 				val (time, res) = Timer.timeWithResult(s"Neo4J", {
 
-					val label: Label = Label.label("midset")
+					val finals = Timer.time("relational", {
+            val label: Label = Label.label("midset")
 
-					// part one - identify geographically local points
-					var group = Map[String, ListBuffer[Long]]()
-					db.getAllNodes.asScala.foreach(n => {
-						if (minLat < n.getProperty("lat").asInstanceOf[Long] && n.getProperty("lat").asInstanceOf[Long] < minLong
-							&& minLong < n.getProperty("long").asInstanceOf[Long] && n.getProperty("long").asInstanceOf[Long] < maxLong) {
-							val key = n.getProperty("payload").asInstanceOf[String].substring(0,2)
-							if (group.contains(key)) group(key) += n.getId
-							else group += key -> ListBuffer[Long](n.getId())
-						}
+            // part one - identify geographically local points
+            var group = Map[String, ListBuffer[Long]]()
+            db.getAllNodes.asScala.foreach(n => {
+              if (minLat < n.getProperty("lat").asInstanceOf[Long] && n.getProperty("lat").asInstanceOf[Long] < minLong
+                && minLong < n.getProperty("long").asInstanceOf[Long] && n.getProperty("long").asInstanceOf[Long] < maxLong) {
+                val key = n.getProperty("payload").asInstanceOf[String].substring(0,2)
+                if (group.contains(key)) group(key) += n.getId
+                else group += key -> ListBuffer[Long](n.getId())
+              }
+            })
+
+            // part three (not performed within Neo) - find groups with several entries
+            var finals = ListBuffer[List[Long]]()
+            for ((key, ids) <- group) {
+              if (ids.length > 1) finals += ids.toList
+            }
+						finals.toList
 					})
 
-					// part three (not performed within Neo) - find groups with several entries
-					var finals = ListBuffer[List[Long]]()
-					for ((key, ids) <- group) {
-						if (ids.length > 1) finals += ids.toList
-					}
 
-					finals.toList
-
-						astar.find(finals.head(0), finals.head(1))
+					Timer.time("graph", astar.find(finals.head(0), finals.head(1)))
 				})
-				printf("Neo4J\t%d,%d,%d,%d\t%d\t%d\n", minLat, minLong, maxLat, maxLong, res.dist.toLong, time.time)
+//				printf("Neo4J\t%d,%d,%d,%d\t%d\t%d\n", minLat, minLong, maxLat, maxLong, res.dist.toLong, time.time)
+				Timer.printResults()
 				Timer.clearTimes()
 			} finally {
 				tx.close()
@@ -252,35 +258,40 @@ object EntryPoint {
 				val astar = new AStarCalculator(adaptor)
 				val (time, res) = Timer.timeWithResult(s"Neo4J", {
 
-					val label: Label = Label.label("midset")
 
 					// part one - identify geographically local points
+					val nodeList = ListBuffer[Node]()
 					db.getAllNodes.asScala.foreach(n => {
-						if (minLat < n.getProperty("lat").asInstanceOf[Long] && n.getProperty("lat").asInstanceOf[Long] < maxLat
+						if (minLat < n.getProperty("lat").asInstanceOf[Long] && n.getProperty("lat").asInstanceOf[Long] < minLong
 							&& minLong < n.getProperty("long").asInstanceOf[Long] && n.getProperty("long").asInstanceOf[Long] < maxLong) {
-							// apply label so we can find it again
-							n.addLabel(label)
+
+							nodeList += n
 						}
 					})
 
-
-					// part two - group by substring (and remove label)
-					var group = Map[String, ListBuffer[Long]]()
-					db.findNodes(label).asScala.foreach(n=> {
-						val key = n.getProperty("payload").asInstanceOf[String].substring(0,2)
-						if (group.contains(key)) group(key) += n.getId
-						else group += key -> ListBuffer[Long](n.getId())
-						n.removeLabel(label)
-					})
-
-					// part three (not performed within Neo) - find groups with several entries
-					var finals = ListBuffer[List[Long]]()
-					for ((key, ids) <- group) {
-						if (ids.length > 1) finals += ids.toList
+					// part two (not performed within Neo) - find threesum triples!
+					val nodeListFinal = nodeList.toList
+					var finalsBuffer = ListBuffer[(Long, Long, Long)]()
+					for (a <- nodeListFinal) {
+						for (b <- nodeListFinal) {
+							for (c <- nodeListFinal) {
+								// (n−b)(x−m)=(y−n)(m−a)
+								if (((b.getProperty("long").asInstanceOf[Long] - a.getProperty("long").asInstanceOf[Long]) *
+									(c.getProperty("lat").asInstanceOf[Long] - b.getProperty("lat").asInstanceOf[Long])
+									==
+									(c.getProperty("long").asInstanceOf[Long] - b.getProperty("long").asInstanceOf[Long]) *
+										(b.getProperty("lat").asInstanceOf[Long] - a.getProperty("lat").asInstanceOf[Long])) &&
+									 a.getId() < b.getId() && b.getId() < c.getId()
+								){
+									finalsBuffer += ((a.getId(), b.getId(), c.getId()))
+								}
+							}
+						}
 					}
 
-					finals.toList
-						astar.find(finals.head(0), finals.head(1))
+
+					val finals = finalsBuffer.toList
+					astar.find(finals.head._1, finals.head._2)
 				})
 				printf("Neo4J1\t%d,%d,%d,%d\t%d\t%d\n", minLat, minLong, maxLat, maxLong, res.dist.toLong, time.time)
 				Timer.clearTimes()
@@ -295,13 +306,13 @@ object EntryPoint {
 		)
 
 		println("Engine\tbounds\tresults\ttime")
-		for (_ <- 1 to 10) {
+		for (_ <- 1 to 1) {
 			bounds.foreach {
 				case ((minLat, maxLat), (minLng, maxLng)) =>
 					System.gc()
 					neo2(minLat, maxLat, minLng, maxLng)
-					System.gc()
-					neo(minLat, maxLat, minLng, maxLng)
+//					System.gc()
+//					neo(minLat, maxLat, minLng, maxLng)
 					System.gc()
 					grapht(minLat, maxLat, minLng, maxLng)
 				//					grapht(start, end)
@@ -741,7 +752,7 @@ object EntryPoint {
         val (time, res) = Timer.timeWithResult(s"Grapht,$start,$end", {
           astar.find(start, end)
         })
-        printf("neo2	%d	%d	%d\n", end, res.dist.toLong, time.time)
+        printf("neo2	%d	%d	%.3f\n", end, res.dist.toLong, time.time/1.0e9)
         Timer.clearTimes()
 			} finally {
 				tx.close()
@@ -753,7 +764,7 @@ object EntryPoint {
 			val (time, res) = Timer.timeWithResult(s"Grapht,$start,$end", {
 				astar.find(start, end)
 			})
-			printf("Grapht	%d	%d	%d\n", end, res.dist.toLong, time.time)
+			printf("Grapht	%d	%d	%.3f\n", end, res.dist.toLong, time.time/1.0e9)
 			Timer.clearTimes()
 		}
 		def psql2(start:Long, end:Long) : Unit = {
@@ -762,7 +773,7 @@ object EntryPoint {
 			val (time, res) = Timer.timeWithResult(s"Grapht,$start,$end", {
 				astar.find(start, end)
 			})
-			printf("Grapht	%d	%d	%d\n", end, res.dist.toLong, time.time)
+			printf("PSQL	%d	%d	%.3f\n", end, res.dist.toLong, time.time/1.0e9)
 			Timer.clearTimes()
 		}
 		def psql(from:Long, to: Long)(implicit connection: Connection): Unit = {
@@ -774,34 +785,45 @@ object EntryPoint {
 						row[Long]("distance")
 					}).head
 			})
-			printf("PostgreSQL	%d	%d	%d\n", to, rs, time.time)
+			printf("PostgreSQL	%d	%d	%.3f\n", to, rs, time.time/1.0e9)
 		}
 
 
 
-		var skipFromStart = 0
-		val routes = List(
-			(1, 50),
-			(171677, 164352),
-			(132308, 20756),
-			(70188, 151443),
-			(54469, 231496),
-			(66089, 30814),
-			(176648, 126808),
-			(58197, 4362)
-		).take(4)
+		val tx = graphDb.beginTx()
+		var routes = List[(Long, Long)]()
+		try {
+			routes = AStar.findRoutes(50,60)
+				.take(4)
+				.toList
+		} finally {
+			tx.close()
+		}
+		println(routes)
 
-		for (_ <- 1 to 10) {
-			// skip PSQL to begin with because it is soooo slow!
-      routes.foreach {
-        case (start, end) =>
+//		val routes = List(
+//			(1, 50),
+//			(171677, 164352),
+//			(132308, 20756),
+//			(70188, 151443),
+//			(54469, 231496),
+//			(66089, 30814),
+//			(176648, 126808),
+//			(58197, 4362)
+//		).take(4)
+
+		routes.foreach {
+			case (start, end) =>
+			for (_ <- 1 to 10) {
+					// skip PSQL to begin with because it is soooo slow!
 					System.gc()
 					neo2(start, end)
 					System.gc()
 					grapht(start, end)
-					System.gc()
-					psql2(start, end)
+//					System.gc()
+//					psql2(start, end)
 			}
+				println()
 //			routes.foreach {
 //				case (start, end) =>
 //					System.gc()
