@@ -16,7 +16,7 @@ import scala.concurrent.ExecutionContext
 
 package object FriendOfFriend extends BenchmarkTest {
 
-  val (hops, id) = (4, 1)
+  val (hops, id) = (5, 1)
 
   def go()(implicit db: GraphDatabaseService, connection:Connection,connection2: Neo4jREST, wsclient:NingWSClient, ec:ExecutionContext): Unit = {
 
@@ -27,13 +27,13 @@ package object FriendOfFriend extends BenchmarkTest {
       List(1, 10, 100, 1000, 5000, 10000, 20000)
         .map(b => (s"Block ($b)", new LookaheadBlockPrefetcher(b))))
 
-    val prefetchers = List() ++ lookaheads //++ blocks
+    val prefetchers = List(("lookahead\t50", new LookaheadMultiPrefetcher(50))) // ++ lookaheads //++ blocks
 
     val tests = List(
       ("Neo", () => getHopDistsNeo(hops, id)),
-      ("Cypher", () => getHopDistsCypher(hops, id)),
-      ("SQL", () => getHopDistsSQL(hops, id)),
-      ("SQL CTE", () => getHopDistsCTESQL(hops, id))
+//      ("Cypher", () => getHopDistsCypher(hops, id)),
+      ("SQL", () => getHopDistsSQL(hops, id))
+//      ("SQL CTE", () => getHopDistsCTESQL(hops, id))
     ) ++ prefetchers.toList.map({
       case (s, p) => (s"GRAPHT $s", () => getHopDists(hops, id, p))
     })

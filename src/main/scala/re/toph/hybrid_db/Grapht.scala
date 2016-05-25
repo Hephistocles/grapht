@@ -46,7 +46,7 @@ object Grapht {
 
         // check we haven't overstepped our limits
         if (pathResults.length >= limit) {
-          println(popCount)
+//          println(popCount)
           return pathResults}
       }
 

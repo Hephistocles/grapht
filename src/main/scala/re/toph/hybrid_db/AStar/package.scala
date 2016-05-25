@@ -2,14 +2,16 @@ package re.toph.hybrid_db
 
 import java.sql.Connection
 
-import anorm.{SqlParser, SQL}
+import anorm.{SQL, SqlParser}
 import org.anormcypher.{Cypher, Neo4jREST}
 import org.neo4j.graphalgo.{CommonEvaluators, EstimateEvaluator, GraphAlgoFactory}
-import org.neo4j.graphdb.{Direction, GraphDatabaseService, Node, PathExpanders}
+import org.neo4j.graphdb._
+import org.neo4j.graphdb.traversal.Evaluators
 import play.api.libs.ws.ning.NingWSClient
-import scala.collection.JavaConverters._
 import re.toph.hybrid_db.Neo4JLoader.ROAD
 
+import scala.collection.JavaConverters._
+import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext
 
 /**
@@ -47,17 +49,58 @@ package object AStar extends BenchmarkTest {
     res
   }
 
-  val (hops, id) = (3, 1)
+  def findRoutes(lim1:Int, lim2:Int)(implicit db: GraphDatabaseService) : Stream[(Long, Long)] =  {
+    val tx = db.beginTx()
+    try {
+
+      val myTraversal = db.traversalDescription()
+        .depthFirst()
+        .relationships( ROAD, Direction.OUTGOING)
+        .evaluator( Evaluators.includingDepths(3 * lim2,3 * lim2) )
+
+      Stream.from(0).
+        map(_ => {
+          val startPoint = Math.floor(Math.random() * 264346L).asInstanceOf[Long]
+          val startNode = db.getNodeById(startPoint)
+          myTraversal.traverse(startNode).asScala.head
+        })
+        .map(p => {
+            GraphAlgoFactory.aStar(
+              PathExpanders.forTypeAndDirection(ROAD, Direction.OUTGOING),
+              CommonEvaluators.doubleCostEvaluator("distance"),
+              new EstimateEvaluator[java.lang.Double] {
+                override def getCost(node1: Node, node2: Node): java.lang.Double = heuristic(
+                  node1.getProperty("lat").asInstanceOf[Long],
+                  node1.getProperty("long").asInstanceOf[Long],
+                  node2.getProperty("lat").asInstanceOf[Long],
+                  node2.getProperty("long").asInstanceOf[Long]
+                )
+              }
+            ).findSinglePath(p.startNode(), p.endNode())
+          })
+        .filter(p => p.length() > lim1 && p.length < lim2)
+        .map(p => {
+          println(p.startNode.getId + "-" + p.length + "->" + p.endNode.getId)
+          (p.startNode.getId, p.endNode.getId)
+        })
+
+    } finally {
+      tx.close()
+    }
+  }
+
 
   def go()(implicit db: GraphDatabaseService, connection:Connection,connection2: Neo4jREST, wsclient:NingWSClient, ec:ExecutionContext): Unit = {
 
 //    //TODO: lookahead join doesn't work atm. Please try again later.
-    val prefetchers = (50 to 100 by 5)
-                          .map(b => (s"Lookahead ($b)", new LookaheadMultiPrefetcher(b))) ++
-//                      List(10000, 20000)
-//                          .map(b => (s"Block ($b)", new LookaheadBlockPrefetcher(b))) ++
-                      (5 to 10 by 1)
-                          .map(b => (s"CTE Lookahead ($b)", new LookaheadCTEPrefetcher(b)))
+//    val prefetchers = (50 to 100 by 5)
+//                          .map(b => (s"Lookahead ($b)", new LookaheadMultiPrefetcher(b))) ++
+////                      List(10000, 20000)
+////                          .map(b => (s"Block ($b)", new LookaheadBlockPrefetcher(b))) ++
+//                      (5 to 10 by 1)
+//                          .map(b => (s"CTE Lookahead ($b)", new LookaheadCTEPrefetcher(b)))
+
+    val prefetchers = List(("Lookahead\t50", new LookaheadMultiPrefetcher(50)))
 
     val routes = List(
       (171677, 164352),
@@ -268,7 +311,7 @@ package object AStar extends BenchmarkTest {
     val results = new Result(
       edgeProps = Map[String, TAccumulator](
         "length" -> new CountAccumulator(0),
-        "path" -> new ConcatAccumulator("id2", ",", id.toString()),
+        "path" -> new ConcatAccumulator("id2", ",", from.toString()),
         "dist" -> new SumAccumulator[Long]("dist", 0)
       ),
       vertexProps = Map[String, TAccumulator](
@@ -292,7 +335,7 @@ package object AStar extends BenchmarkTest {
         //        new LessThanOrEqualCondition[Int]("length", 3, Increasing(Some(1)))
       )
 
-    val rs = Grapht.query(g, id, results, condition, prioritiser, 1)
+    val rs = Grapht.query(g, from, results, condition, prioritiser, 1)
       .map({
         m => (m("dist").asInstanceOf[Long], m("path").asInstanceOf[String].split(",").map(_.toLong))
       }).head
@@ -313,7 +356,7 @@ package object AStar extends BenchmarkTest {
     val results = new Result(
       edgeProps = Map[String, TAccumulator](
         "length" -> new CountAccumulator(0),
-        "path" -> new ConcatAccumulator("id2", ",", id.toString()),
+        "path" -> new ConcatAccumulator("id2", ",", from.toString()),
         "dist" -> new SumAccumulator[Long]("dist", 0)
       ),
       vertexProps = Map[String, TAccumulator](
@@ -342,12 +385,51 @@ package object AStar extends BenchmarkTest {
         //        new LessThanOrEqualCondition[Int]("length", 3, Increasing(Some(1)))
       )
 
-    val rs = Grapht.query(g, id, results, condition, prioritiser, 1)
+    val rs = Grapht.query(g, from, results, condition, prioritiser, 1)
       .map({
         m => (m("dist").asInstanceOf[Long], m("path").asInstanceOf[String].split(",").map(_.toLong))
       }).head
 
     println(s"Gpht: ${rs._1} in ${rs._2.length} hops: ${rs._2.mkString("->")}")
+    rs
+  }
+
+
+  def get100(p: Prefetcher)(implicit connection:Connection): ListBuffer[Array[Long]] = {
+    val startId = Math.floor(Math.random() * 264346).asInstanceOf[Long]
+
+    val g = new Graph(p)
+
+    // todo: make list accumulator
+    val results = new Result(
+      edgeProps = Map[String, TAccumulator](
+        "length" -> new CountAccumulator(0),
+        "path" -> new ConcatAccumulator("id2", ",", startId.toString())
+      ),
+      vertexProps = Map[String, TAccumulator](
+        "start" -> new ConstAccumulator(startId),
+        "end" -> new LastAccumulator("id", startId)
+      ))
+
+    // expand the longest paths first for depth-first search
+    def prioritiser(edge:Edge, vertex:GraphNode, sofar: Result)(implicit connection:Connection): Double = {
+      sofar.get("length").asInstanceOf[Int].toDouble
+    }
+
+    val condition = new EqualityCondition[Int]("length", 20, Increasing(Some(1)))
+
+    val rs = Timer.time("paths", {
+      Grapht.query(g, startId, results, condition, prioritiser, 2)
+        .map({
+          m => m("path").asInstanceOf[String].split(",").map(_.toLong)
+        })
+    })
+      rs.foreach(rs => {
+        println(s"Gpht: in ${rs.length} hops: ${rs.mkString("->")}")
+//        grapht(startId, rs.last, p)
+      })
+    Timer.printResults()
+
     rs
   }
 }
