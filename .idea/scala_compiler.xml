@@ -5,5 +5,6 @@
       <option name="postfixOps" value="true" />
       <option name="implicitConversions" value="true" />
     </profile>
+    <profile name="SBT 2" modules="grapht" />
   </component>
 </project>
