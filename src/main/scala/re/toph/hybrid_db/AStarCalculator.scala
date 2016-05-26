@@ -1,6 +1,7 @@
 package re.toph.hybrid_db
 import java.sql.Connection
 import java.util.{Comparator, HashMap, PriorityQueue}
+import anorm.SQL
 
 import org.neo4j.graphdb.{Direction, GraphDatabaseService, Node, Relationship}
 import re.toph.hybrid_db.Neo4JLoader.ROAD
@@ -17,6 +18,24 @@ trait GraphAdaptor[K,V,E] {
   def getDist(e:E) : Long
   def getTarget(e:E) : V
   def getKey(v:V) : K
+}
+
+case class PSQLEdge(id:Long, id1:Long, id2:Long, dist:Long)
+class PSQLAdaptor(vertex:String, vertexKey:String, edge:String, id1:String, id2:String)(implicit connection:Connection) extends GraphAdaptor[Long,Long,PSQLEdge] {
+
+  override def getVertex(k: Long): Long = k
+
+  override def getDist(e: PSQLEdge): Long = e.dist
+
+  override def getLatLng(v: Long): (Long, Long) = SQL(s"SELECT lat, lng FROM $vertex WHERE $vertexKey={k}")
+                                                    .on("k"->v)().map(r => (r[Long]("lat"), r[Long]("lng"))).head
+
+  override def getEdges(k: Long): Iterator[PSQLEdge] = SQL(s"SELECT * FROM $edge WHERE $id1={k}")
+                                                    .on("k"->k)().map(r => PSQLEdge(r[Long]("id"), r[Long](id1), r[Long](id2), r[Long]("dist"))).iterator
+
+  override def getTarget(e: PSQLEdge): Long = e.id2
+
+  override def getKey(k: Long): Long = k
 }
 
 class GraphtAdaptor(g:Graph)(implicit connection:Connection) extends GraphAdaptor[Long,GraphNode,Edge] {
@@ -174,3 +193,4 @@ class AStarCalculator[VertexKey,Vertex,Edge](g : GraphAdaptor[VertexKey,Vertex,E
 
 
 }
+
