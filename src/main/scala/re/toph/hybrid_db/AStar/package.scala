@@ -79,7 +79,7 @@ package object AStar extends BenchmarkTest {
               }
             ).findSinglePath(p.startNode(), p.endNode())
           })
-        .filter(p => p.length() > lim1 && p.length < lim2)
+        .filter(p => p.length() >= lim1 && p.length <= lim2)
         .map(p => {
           println(p.startNode.getProperty("id").toString + "-" + p.length + "->" + p.endNode.getProperty("id").toString)
           (p.startNode.getProperty("id").asInstanceOf[Long], p.endNode.getProperty("id").asInstanceOf[Long])

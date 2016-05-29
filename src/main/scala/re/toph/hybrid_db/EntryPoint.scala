@@ -92,20 +92,24 @@ object EntryPoint {
       //			threeSumTst()
 
 
-      separator("Relational")
-      printToFile(getFile("rela-leven")) { p =>
-        relaLevenshtein(p, 3, 10)
+      separator("Prefetcher")
+      printToFile(getFile("prefetcher")) { p =>
+        prefetcherTest(p, 1, 5)
       }
-
-      separator("Hybrid")
-      printToFile(getFile("hybrid-astar-leven")) { p =>
-        hybridPOI(p, 3, 10)
-      }
-
-      separator("Graph")
-      printToFile(getFile("graph-astar")) { p =>
-        graphTest(p, 3, 10)
-      }
+//      separator("Relational")
+//      printToFile(getFile("rela-leven")) { p =>
+//        relaLevenshtein(p, 3, 10)
+//      }
+//
+//      separator("Hybrid")
+//      printToFile(getFile("hybrid-astar-leven")) { p =>
+//        hybridPOI(p, 3, 10)
+//      }
+//
+//      separator("Graph")
+//      printToFile(getFile("graph-astar")) { p =>
+//        graphTest(p, 3, 10)
+//      }
     } catch {
       case e: Throwable => e.printStackTrace()
     } finally {
@@ -160,60 +164,60 @@ object EntryPoint {
   }
 
 
-
-
-  def prefetcherTest(p: PrintWriter, routesNum:Int, iterations:Int): Unit = {
+  def prefetcherTest(p: PrintWriter, routesNum: Int, iterations: Int): Unit = {
 
     val prefetchers =
-      (1 to 10)
+      (1 to 9)
         .map(b => (s"CTE Lookahead", b, new LookaheadCTEPrefetcher(b))) ++
-        (1 to 150 by 15)
+        List(1, 5, 10, 20, 40, 60, 80, 100, 120, 140, 160, 180, 200)
           .map(b => (s"Lookahead", b, new LookaheadMultiPrefetcher(b))) ++
         List(("Null Prefetcher", 0, new NullPrefetcher())) ++
-        List(1, 10, 50, 100, 250, 500, 1000, 5000, 10000, 20000, 50000, 100000)
+        List(100, 1000, 5000, 10000, 15000, 20000)
           .map(b => (s"Block", b, new LookaheadBlockPrefetcher(b)))
 
-
     val tx = graphDb.beginTx()
-    var routes = List[(Long, Long)]()
-    try {
-      routes = AStar.findRoutes(50, 60)
-        .take(routesNum)
-        .toList
-    } finally {
-      tx.close()
-    }
-
-    val tests =
-      routes.flatMap {
-        case (start, end) =>
-          prefetchers.map {
-            case (name, size, prefetcher) =>
-              () => {
-                // now would be a good time to GC. During the test, not so much.
-                val g = new Graph(prefetcher)
-                val adaptor = new GraphtAdaptor(g)
-                val astar = new AStarCalculator(adaptor)
-                System.gc()
-                val (time, _) = Timer.timeWithResult(s"$name,$start,$end", {
-                  astar.find(start, end)
-                })
-                p.printf(f"$name%s	$size%d	$start%d	$end%d	${g.callCount}%d	${g.evictionCount}%d	${g.hitCount}%d"
-                         + f"	${g.missCount}%d	${time.time}%d")
-                time.subs.get("DB") match {
-                  case Some(x) => p.printf(f"${x.time}%d	${x.count}%d\n")
-                  case None => p.printf("0	0\n")
-                }
-                Timer.clearTimes()
-              }
-          }
+    var routes = ListBuffer[(Long, Long, Int)]()
+    for (_ <- 1 to routesNum) {
+      try {
+        for (l <- 100 to 100 by 20) {
+          val (start, end) = AStar.findRoutes(l, l).head
+          routes += ((start, end, l))
+        }
+      } finally {
+        tx.close()
       }
+    }
+    println("Found the routes!")
 
-    // p.println("Prefetcher	Size	Start	End	Vertices Requested	Vertices Evicted	Cache Hits	Cache Misses	Total Runtime	Total DB time	DB calls")
+    p.println("Prefetcher	Size	Start	End	Vertices Requested	Vertices Evicted	Cache Hits	Cache Misses	Total Runtime	Total DB time	DB calls")
+    routes.toList.foreach {
+      case (start, end, length) =>
+        println(s"Route from $start to $end")
+        prefetchers.foreach {
+          case (name, size, prefetcher) =>
+            printf(s"    $name ($size)")
+            for (i <- 1 to iterations) {
+              printf(s" $i...")
 
-    // assuming 10 iterations
-    for (_ <- 1 to iterations) {
-      tests.foreach(f => f())
+              // now would be a good time to GC. During the test, not so much.
+              val g = new Graph(prefetcher)
+              val adaptor = new GraphtAdaptor(g)
+              val astar = new AStarCalculator(adaptor)
+              System.gc()
+              val (time, _) = Timer.timeWithResult(s"$name,$start,$end", {
+                astar.find(start, end)
+              })
+              p.printf(f"$name%s	$size%d	$length $start%d	$end%d	${g.callCount}%d	${g.evictionCount}%d	${g.hitCount}%d"
+                + f"	${g.missCount}%d	${time.time}%d")
+              time.subs.get("DB") match {
+                case Some(x) => p.printf(f"${x.time}%d	${x.count}%d\n")
+                case None => p.printf("0	0\n")
+              }
+              Timer.clearTimes()
+              p.flush()
+            }
+            printf(" Done!\n")
+        }
     }
   }
 
