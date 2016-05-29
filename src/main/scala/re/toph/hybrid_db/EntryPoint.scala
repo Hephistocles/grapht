@@ -179,7 +179,7 @@ object EntryPoint {
     var routes = ListBuffer[(Long, Long, Int)]()
     for (_ <- 1 to routesNum) {
       try {
-        for (l <- 100 to 100 by 20) {
+        for (l <- 20 to 100 by 20) {
           val (start, end) = AStar.findRoutes(l, l).head
           routes += ((start, end, l))
         }
@@ -207,8 +207,8 @@ object EntryPoint {
               val (time, _) = Timer.timeWithResult(s"$name,$start,$end", {
                 astar.find(start, end)
               })
-              p.printf(f"$name%s	$size%d	$length $start%d	$end%d	${g.callCount}%d	${g.evictionCount}%d	${g.hitCount}%d"
-                + f"	${g.missCount}%d	${time.time}%d")
+              p.printf(f"$name%s	$size%d $length $start%d	$end%d	${g.callCount}%d	${g.evictionCount}%d	${g.hitCount}%d"
+                + f"	${g.missCount}%d	${time.time}%d  ")
               time.subs.get("DB") match {
                 case Some(x) => p.printf(f"${x.time}%d	${x.count}%d\n")
                 case None => p.printf("0	0\n")
