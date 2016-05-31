@@ -1,39 +1,39 @@
 \section{Relational Databases}
 
-The relational database model first arose in in the 1970s with
-Codd's~\cite{Codd} famous ``Relational Model of Data.'' The success of this
-model was largely due to its simplicity, and it quickly found favour with the
+The relational database model first came to the fore in in the 1970s with
+Codd's famous \textit{Relational Model of Data}~\cite{Codd}. The simplicity of this
+model brought immediate success, and it quickly found favour in
 industry at the time. Since then, the model has been carefully refined, with
 numerous implementations each offering incremental optimisations.
 
-Along with simplicity, most RDBMS provide desirable guarantees such as
+Along with simplicity, most RDBMSs provide desirable guarantees such as
 atomicity, consistency, isolation and durability (ACID). These properties were
-formally defined by Gray~\cite{gray1981transaction}, and are now highly prized
+formally defined by Gray~\cite{gray1981transaction}, and are now highly prized in a database system,
 since they give a high degree of confidence in the integrity of data, and
-allow databases to be parallelised and distributed across several machines
+allow database queries to be parallelised and distributed across several machines
 without risk of conflict between multiple concurrent queries.
 
 These factors have lead to widespread adoption of the relational database
 model,  and a corresponding proliferation of implementations, including MySQL,
 SQL Server and PostgreSQL. I will be evaluating PostgreSQL in this report, and
-using it as a base relational store upon which to build a graph-centric hybrid
+using it as a base RDBMS upon which to build a graph-centric hybrid
 store. PostgreSQL is a popular, open-source database system supporting most of
 the SQL standard. It also supports a procedural language called PL/pgSQL which
 extends SQL to offer more programming control. In particular, PostgreSQL
-supports recursive SQL queries which are valuable for efficiently finding
+supports recursive SQL queries which are crucial for efficiently finding
 paths through an edge relation without performing exhaustive \texttt{JOIN}s.
 
 \section{Graph Databases}
 
-Although Graph databases have enjoyed a recent resurgence in popularity, the
+Although graph databases have enjoyed a recent resurgence in popularity, the
 principles themselves are not much younger than Codd's relational database
-model. Indeed, both models aim to represent relationships between entities.
+model. Indeed, both models aim to represent relationships between entities with only slightly different focusses.
 Chen~\cite{Chen} provided one of the earliest incarnations in the form of his
-``Entity-relationship Model.'' This found popularity alongside the development
+\textit{Entity-relationship Model.} This found popularity alongside the development
 of object-oriented programming in the 1980s, and several variations to this
 model were presented at the time~\cite{Kim}\cite{Abiteboul}.
 Kunii~\cite{Kunii:1987:DGD:42040.42071} presented the first properly-called
-graph database model, called G-Base. Interest waned in the late 90s for a
+graph database model, called \textit{G-Base}. Interest waned in the late 90s for a
 variety of reasons, including a general move by the database research
 community towards semistructured data. Recent times have seen a resurgence in
 popularity, as alternative strategies are explored to handle the ``Big Data''
@@ -48,7 +48,7 @@ Knowledge Graph~\cite{singhal2012introducing}, aiming to connect search terms
 to real-world entities. The benefit of these graph databases is that queries
 can be localised to a particular area within the graph. Without direct links
 between related entities, every entity in the database would need to be
-considered at to determine whether it is related to another. This approach is
+considered to determine whether it is related to another. This approach is
 inefficient, particularly as the size of a database grows, and the cost of
 traversing the  entire store increases.
 
@@ -75,20 +75,20 @@ store, which runs on the JVm and presents a Java API.
 
 The incumbency of relational databases coupled with the potential scalability
 of  graph databases naturally prompts the question of whether it is possible
-to efficiently store and query graph structured data in a relation database.
+to efficiently store and query graph structured data in a relational database.
 Indeed, several efforts have been made in this direction. 
 
 Object-relational mapping (ORM) frameworks such as Hibernate ORM for Java
 allow programmers to map an object-oriented domain model to a relational
 database. This allows semantic links to be easily followed from one entity to
-another by abstracting away from the underlying relational stores. Although
+another by abstracting away from the underlying RDBMS. Although
 ORM frameworks allow programmers to feel as though they are using a graph
 database, they do not tend to focus on bringing any of the performance or
 scalability advantages of graph databases to the relational world.
 
 Another approach is taken by OQGraph\cite{oqgraph}, which provides a plugin
-for  MariaDB and MySQL. By imitating a storage engine, users query a proxy
-table, which OQGraph interprets as graph traversal instructions. Although this
+for  MariaDB and MySQL.  Users query a proxy
+table, which OQGraph interprets as graph traversal instructions by imitating a storage engine. Although this
 somewhat improves the programmer experience by providing a more graph-centric
 interface, performance is not comparable to pure graph databases.
 Additionally, since the plugin imitates a  storage engine, no parser
@@ -99,32 +99,30 @@ graph-centric queries are awkward to express.
 Biskup et al.~\cite{gSQL} described in 1990 a SQL extension which could be
 used to  query graph relations. No implementation is provided, and again, no
 performance considerations are made, but the work nonetheless provides a valuable 
-inspiration for Grapht's query language \textit{gSQL}.
+inspiration for Grapht's query language \textit{gSQL}. Biskup's work is further discussed alonside gSQL in Chapter~\ref{ch:implementation}.
 
 A more performance-oriented approach to bringing relational and graph
 databases together can be found in Sun et
 al.'s~\cite{Sun:2015:SER:2723372.2723732} SQLGraph. This approach uses
 relational storage for adjacency information, and JSON storage for vertex and
-edge attributes. Although this approach does improve performance for graph-
-centric queries, moving attribute information to JSON files hurts performance
-of normal relational queries, reducing performance in this direction.
+edge attributes. Although this approach does improve performance for graph-centric queries, 
+moving attribute information to JSON files hurts performance
+of normal relational queries, which rely on fast and local access to attribute data to filter out rows.
 
-Most recently, a Spark package has been produced which extends the
-\textit{DataFrames} library to handle graph data called \textit{GraphFrames}~\cite{graphframes}.
+Most recently, a Spark package has been developed called \textit{GraphFrames} which extends the
+DataFrames library to handle graph data\cite{graphframes}.
 DataFrames are a way of abstracting any underlying data source by loading it
 into a Spark \textit{Resilient Distributed Dataset} (RDD). The GraphFrames
-extension extends these RDDs by allowing them to be interpreted as adjacency
-tables, and providing graph traversal methods. The query language provided is
-somewhat limited, however, primarily designed for simple pattern-matching
-within the graph rather than performing intelligent traversals as Grapht can
-do. Unlike Grapht, by building directly on top of Spark, GraphFrames queries
+extension extends these RDDs by allowing them to be interpreted as graph adjacency
+tables, and providing graph traversal methods. The query language provided  for GraphFrames is
+somewhat limited, however, primarily designed for simple pattern-matching. It is not possible to guide the search direction through the graph, which is an ability that Grapht does have. Unlike Grapht, by building directly on top of Spark, GraphFrames queries
 are easy to distribute and parallelise across a number of machines.
 
 Finally, my work also takes inspiration from Yoneki et al.'s
-\textit{Crackle}~\cite{crackle}, which  improves graph performance using a
-relational store by maintaining a limited graph cache in memory, which is
+\textit{Crackle}~\cite{crackle}, which  improves graph performance of a
+relational store by maintaining a limited graph store in memory, which is
 periodically filled using graph-aware prefetchers to ensure topologically
-local vertices are preserved in the cache. Crackle did not consider relational
-queries either, however, nor did it attempt to present a declarative hybrid
+local vertices are preserved in the store. Crackle does not support pure-relational or hybrid queries, however,
+nor does it attempt to present a declarative
 query interface in the way that Grapht does. We replicate and extend some of
 the Crackle results in Chapter~\ref{ch:evaluation}.
