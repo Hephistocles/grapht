@@ -8,18 +8,18 @@ import matplotlib.ticker
 
 plt.style.use("ggplot")
 colors = {
-    "Neo4J (b)": '#FFE700',
-     "PostgreSQL": '#0077bb',
-    "Grapht": '#00bb33',
-    "Neo4J": '#ffa500',
-    "PostgreSQL-dark": '#002255',
-    "Grapht-dark": '#005522',
-    "Neo4J-dark": '#774500'
+	"Neo4J (b)": '#FFE700',
+	 "PostgreSQL": '#0077bb',
+	"Grapht": '#00bb33',
+	"Neo4J": '#ffa500',
+	"PostgreSQL-dark": '#002255',
+	"Grapht-dark": '#005522',
+	"Neo4J-dark": '#774500'
 }
 
 font = {'family' : 'sans-serif',
-        'weight' : 'bold',
-        'size'   : 22}
+		'weight' : 'bold',
+		'size'   : 22}
 
 matplotlib.rc('font', **font)
 
@@ -33,8 +33,8 @@ matplotlib.rc('font', **font)
 #           Min lookahead time appears to be ever so slightly faster than CTE. But benefit of lookahead really that it is roughly stable at large
 #           values, whereas for CTE we would need to get exactly the optimal point to benefit.
 #       Variance slightly higher for Lookahead, presumably as random deviation from DB calls stack up
-            
-        
+			
+		
 # df = pd.read_csv("../benches/prefetcher-bylength.tsv", sep='\t')
 # for prefetcher, d in df.groupby("Prefetcher"):
 # 	# skip the null prefetcher since it has no size
@@ -65,8 +65,8 @@ matplotlib.rc('font', **font)
 # #             Min lookahead time appears to be ever so slightly faster than CTE. But benefit of lookahead really that it is roughly stable at large
 # #             values, whereas for CTE we would need to get exactly the optimal point to benefit.
 # #         Variance slightly higher for Lookahead, presumably as random deviation from DB calls stack up
-            
-        
+			
+		
 df = pd.read_csv("../benches/prefetcher-10.tsv",sep='\t')
 for prefetcher, d in df.groupby("Prefetcher"):
 	# skip the null prefetcher since it has no size
@@ -79,13 +79,15 @@ for prefetcher, d in df.groupby("Prefetcher"):
     ax.yaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(lambda x, pos: str(int(round(x))) if x>=1 else str(x)))
 
     for endpoint, d in d.groupby("Hops"):
-        vals1 = d.groupby("Size")["Total Runtime"]
-        # vals2 = d.groupby("Size")["Cache Misses"]
-        # means = vals1.mean()/vals2.mean()
-        means = vals1.mean()/1e9
-        errors = vals1.std()/1e9
-        means.plot(yerr=errors, label=endpoint)
-    plt.legend(loc="upper right")
+        vals1 = d.groupby("Size")["Total DB time"]
+        vals2 = d.groupby("Size")["Cache Misses"]
+        means = vals1.mean()/(1e9*vals2.mean())
+        # means = vals1.mean()
+        errors = vals1.std()
+        means.plot(label=endpoint)
+    plt.legend(loc="lower right")
+    plt.xlabel("Lookahead Depth")
+    plt.ylabel("Average Cost of Cache Miss (s)")
     plt.suptitle(prefetcher)
 
 
@@ -158,6 +160,50 @@ for prefetcher, d in df.groupby("Prefetcher"):
 
 
 
+df = pd.read_csv("../benches/hybrid-astar-leven.tsv",sep='\t')
+
+numberOfRoutes = 1
+ind = np.arange(numberOfRoutes)  # the x locations for the groups
+width = 0.3       # the width of the bars
+fig, ax = plt.subplots()
+fig.suptitle("Hybrid Query (Levenshtein + A*) Execution Time")
+ax.set_xscale("log", nonposy='clip')
+ax.set_xlim([1e-2,1e2])
+
+
+i = 0
+engines = ["Neo4J", "Grapht", "PostgreSQL"]
+g = df.groupby("Engine")
+for engine in engines:
+	i += 1
+	# if (engine == "Grapht"): continue
+	d = g.get_group(engine)
+	vals = d#.groupby("Route")
+
+	means = vals.mean()["Total Time"]
+	errors = vals.std()["Total Time"]
+	ax.barh(ind - (i*width), means/1e9, width, color=colors[engine], label=engine)
+
+
+	# relmeans=means
+
+	# means = vals.mean()["Relational Time"]
+	# errors = vals.std()["Relational Time"]
+	# ax.barh(ind - (i*width), means/1e9, width, left=relmeans/1e9,  color=colors[engine], label=engine)
+	# for endpoint, d in df.groupby("Endpoint"):
+
+	ax.text(0.1, 0.166666 + (i-1)*0.333333, 
+		("%.2f%% Levenshtein \n%.2f%% A*"%(100*vals.mean()["Graph Time"]/means, 100*vals.mean()["Relational Time"]/means)),
+		style='italic', va='center',
+        transform=ax.transAxes)
+
+ax.yaxis.set_visible(False)
+ax.set_xlabel("Execution Time (s)")
+ax.xaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(lambda x, pos: str(int(round(x))) if x>=1 else str(x)))
+plt.legend(loc="upper right")
+# plt.show()
+
+
 
 # df = pd.read_csv("../benches/hybrid-astar-leven.tsv",sep='\t')
 
@@ -165,10 +211,12 @@ for prefetcher, d in df.groupby("Prefetcher"):
 # ind = np.arange(numberOfRoutes)  # the x locations for the groups
 # width = 0.28       # the width of the bars
 # fig, ax = plt.subplots()
-# fig.suptitle("Combination Query (A* + Levenshtein) Execution Time")
-# ax.set_xscale("log", nonposy='clip')
-# ax.set_xlim([1e-2,1e2])
-
+# fig.suptitle("Hybrid Query (Levenshtein + A*) Execution Time")
+# # ax.set_xscale("log", nonposy='clip')
+# # ax.set_xlim([1e-2,1e2])
+# 
+# ax.text(3, 8, 'boxed italics text in data coords', style='italic',
+#         bbox={'facecolor':'red', 'alpha':0.5, 'pad':10})
 # i = 0
 # engines = ["Neo4J", "Grapht", "PostgreSQL"]
 # g = df.groupby("Engine")
@@ -180,16 +228,19 @@ for prefetcher, d in df.groupby("Prefetcher"):
 
 # 	means = vals.mean()["Graph Time"]
 # 	errors = vals.std()["Graph Time"]
-# 	ax.barh(ind - (i*0.28), means/1e9, 0.28, color=colors[engine + "-dark"])
+# 	# ax.barh(ind - (i*0.28), means/1e9, 0.28, color=colors[engine + "-dark"])
+
 
 # 	relmeans=means
 
 # 	means = vals.mean()["Relational Time"]
 # 	errors = vals.std()["Relational Time"]
-# 	ax.barh(ind - (i*0.28), means/1e9, 0.28, left=relmeans/1e9,  color=colors[engine], label=engine)
+# 	# ax.barh(ind - (i*0.28), means/1e9, 0.28, left=relmeans/1e9,  color=colors[engine], label=engine)
 # 	# for endpoint, d in df.groupby("Endpoint"):
+# 	plt.figtext(ind[0] - (i*0.28), means/2e9, 'Foo', ha='center', va='bottom')
+# 	print(ind[0] - (i*0.28), means/2e9)
 
-# ax.yaxis.set_visible(False)
+# # ax.yaxis.set_visible(False)
 # ax.set_xlabel("Execution Time (s)")
 # ax.xaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(lambda x, pos: str(int(round(x))) if x>=1 else str(x)))
 # plt.legend(loc="upper right")
